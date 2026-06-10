@@ -1,36 +1,49 @@
 <template>
-  <div>
-    <div v-if="data && data.length > 0" class="votes">
-      <div class="title row">
-        <div class="col-2">Voter</div>
-        <div class="col-2">Weight</div>
-        <div class="col-2">Value</div>
-        <div class="col-2">New payout</div>
-        <div class="col-2">Curation</div>
-        <div class="col-2">Time</div>
-      </div>
-      <div v-for="(v, i) in votes" :key="i" class="data row">
-        <div class="col-2">
-          <router-link :to="EXPLORER + '@' + v.voter">@{{ v.voter }}</router-link>
-          <span class="reputation">({{ v.rep_log }})</span>
-        </div>
-        <div class="col-2">{{ v.vote_weight }}</div>
-        <div class="col-2">{{ v.vote_value }}</div>
-        <div class="col-2">{{ v.vote_value_before }}</div>
-        <div class="col-2">{{ v.curation }}</div>
-        <div class="col-2" :title="v.time">{{ v.time_text }}</div>
-      </div>
-    </div>
-    <div v-else class="votes">
-      <div class="title row">
-        <div class="col-2">Voter</div>
-      </div>
-      <div v-for="(voter, i) in dataApi" :key="i" class="data row">
-        <div class="col-2">
-          <router-link :to="EXPLORER + '@' + voter">@{{ voter }}</router-link>
-        </div>
+  <div class="votes-wrap">
+    <!-- Full vote data from RPC -->
+    <div v-if="data && data.length > 0">
+      <div class="votes-table-wrap">
+        <table class="votes-table">
+          <thead>
+            <tr>
+              <th>Voter</th>
+              <th>Weight</th>
+              <th>Value</th>
+              <th>Curation</th>
+              <th>Time</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="(v, i) in votes" :key="i">
+              <td>
+                <router-link :to="EXPLORER + '@' + v.voter" class="voter-link">@{{ v.voter }}</router-link>
+                <span class="rep-badge">{{ v.rep_log }}</span>
+              </td>
+              <td class="num">{{ v.vote_weight }}</td>
+              <td class="num accent">{{ v.vote_value }}</td>
+              <td class="num">{{ v.curation }}</td>
+              <td class="time" :title="v.time">{{ v.time_text }}</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
+
+    <!-- Lightweight list from API (no RPC vote data) -->
+    <div v-else-if="dataApi && dataApi.length > 0">
+      <div class="voters-list">
+        <router-link
+          v-for="(voter, i) in dataApi"
+          :key="i"
+          :to="EXPLORER + '@' + voter"
+          class="voter-chip"
+        >
+          @{{ voter }}
+        </router-link>
+      </div>
+    </div>
+
+    <div v-else class="empty-votes">No votes yet</div>
   </div>
 </template>
 
@@ -43,9 +56,9 @@ export default {
   name: 'Votes',
 
   props: {
-    data: { type: Array, required: true },
-    dataApi: { type: Array, required: true },
-    payout: { type: Object, required: true },
+    data:    { type: Array,  required: true },
+    dataApi: { type: Array,  required: true },
+    payout:  { type: Object, required: true },
   },
 
   setup() {
@@ -81,7 +94,7 @@ export default {
 
       return votes_aux.map(v => {
         v.vote_weight = (v.percent / 100).toFixed(2) + '%'
-        v.vote_value = (total_payout_sbd * parseInt(v.rshares) / total_rshares).toFixed(3) + ' ' + Config.SBD
+        v.vote_value  = (total_payout_sbd * parseInt(v.rshares) / total_rshares).toFixed(3) + ' ' + Config.SBD
         if (this.payout.old_post) {
           v.curation = (total_payout_curator_sbd * v.weight / total_weight).toFixed(3) + ' ' + Config.SBD
         } else if (this.chain.feed_price >= 0) {
@@ -90,7 +103,7 @@ export default {
           v.curation = (total_payout_curator_sbd * v.weight / total_weight).toFixed(3) + ' ' + Config.SBD
         }
         v.time_text = Utils.getTimestamp(v.time)
-        v.rep_log = Utils.getReputation(v.reputation)
+        v.rep_log   = Utils.getReputation(v.reputation)
         return v
       })
     },
@@ -99,7 +112,111 @@ export default {
 </script>
 
 <style scoped>
-.title { width: 100%; border: solid 1px #8a8a8a; color: #a0a0a0; background-color: white; padding: 6px 10px; }
-.data { width: 100%; border: solid 1px #8a8a8a; border-top-width: 0px; background-color: white; padding: 6px 10px; }
-.reputation { font-size: 0.9rem; }
+.votes-wrap {
+  font-family: 'DM Sans', sans-serif;
+}
+
+/* Scrollable wrapper for wide table */
+.votes-table-wrap {
+  overflow-x: auto;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(15,23,42,.05);
+}
+
+.votes-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: .84rem;
+  white-space: nowrap;
+}
+
+.votes-table thead tr {
+  background: #f8fafc;
+  border-bottom: 2px solid #e2e8f0;
+}
+
+.votes-table th {
+  padding: .65rem 1rem;
+  text-align: left;
+  font-size: .7rem;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: #64748b;
+}
+
+.votes-table tbody tr {
+  border-bottom: 1px solid #f1f5f9;
+  transition: background .15s;
+}
+
+.votes-table tbody tr:last-child { border-bottom: none; }
+
+.votes-table tbody tr:hover { background: #f0fdfc; }
+
+.votes-table td {
+  padding: .6rem 1rem;
+  color: #0f172a;
+  vertical-align: middle;
+}
+
+.voter-link {
+  font-weight: 600;
+  color: #0f172a;
+  text-decoration: none;
+  transition: color .15s;
+}
+.voter-link:hover { color: #0d9488; }
+
+.rep-badge {
+  display: inline-block;
+  margin-left: .4rem;
+  padding: .1em .45em;
+  font-size: .7rem;
+  background: #f1f5f9;
+  color: #64748b;
+  border-radius: 4px;
+  font-weight: 500;
+  vertical-align: middle;
+}
+
+.num  { font-variant-numeric: tabular-nums; color: #475569; }
+.accent { color: #0d9488; font-weight: 600; }
+.time { color: #64748b; font-size: .8rem; }
+
+/* Voter chips (API-only fallback) */
+.voters-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+}
+
+.voter-chip {
+  display: inline-block;
+  padding: .3rem .7rem;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 999px;
+  font-size: .8rem;
+  color: #0f172a;
+  text-decoration: none;
+  transition: border-color .15s, color .15s, background .15s;
+}
+.voter-chip:hover {
+  border-color: #0d9488;
+  color: #0d9488;
+  background: #f0fdfc;
+}
+
+.empty-votes {
+  padding: 1.25rem;
+  color: #64748b;
+  font-size: .88rem;
+  text-align: center;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+}
 </style>

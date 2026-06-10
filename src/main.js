@@ -2,6 +2,7 @@ import 'regenerator-runtime/runtime'
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import { createBootstrap, BModal } from 'bootstrap-vue-next'
+import { MotionPlugin } from '@vueuse/motion'
 import 'bootstrap/dist/css/bootstrap.css'
 import 'bootstrap/dist/js/bootstrap.bundle.min.js'
 import 'bootstrap-vue-next/dist/bootstrap-vue-next.css'
@@ -42,6 +43,7 @@ const app = createApp(App)
 app.use(createPinia())
 app.use(router)
 app.use(createBootstrap())
+app.use(MotionPlugin)
 
 app.component('BModal', BModal)
 
