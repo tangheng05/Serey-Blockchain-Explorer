@@ -1,96 +1,187 @@
 <template>
-  <div class="home">
+  <div class="home-page">
     <AppHeader ref="appHeader" />
-    <div class="container">
-      <h1>Serey Explorer</h1>
-      <div class="row">
-        <div class="col-md-3">
-          <div v-if="exists.globals">
-            <div class="card">
-              <div class="title">Current supply</div><br>
-              {{ chain.current_supply }}<br>
-              {{ chain.current_sbd_supply }}<br>
-              <hr>virtual {{ chain.virtual_supply }}
-            </div>
-            <div v-if="sereyPrice" class="card">
-              <div class="title">Serey Price</div>
-              <br>{{ sereyPrice }} &nbsp;$
-            </div>
-            <div class="card">
-              <div class="title">Inflation</div><br>
-              Annual rate: {{ chain.current_inflation_rate }}<br>
-              ({{ chain.new_steem_per_day }} per day)
-            </div>
-            <div class="card">
-              <div class="title">Stake</div><br>
-              Fund: {{ chain.total_vesting_fund_steem }}<br>
-              ({{ chain.sp_percent ? chain.sp_percent.toFixed(2) : '0' }}% of virtual sup.)<br>
-              Shares: {{ chain.total_vesting_shares }}<br>
-              <hr>
-              {{ chain.steem_per_mvests ? chain.steem_per_mvests.toFixed(3) : '0' }} {{ STEEM_SYMBOL }} per m{{ VESTS_SYMBOL }}
+
+    <div class="home-layout">
+
+      <!-- ── LEFT SIDEBAR: Chain stats ── -->
+      <aside class="home-sidebar">
+
+        <template v-if="exists.globals">
+          <div class="s-card"
+            v-motion
+            :initial="{ opacity: 0, x: -24 }"
+            :enter="{ opacity: 1, x: 0, transition: { type: 'spring', stiffness: 280, damping: 22, delay: 60 } }"
+          >
+            <div class="card-eyebrow">Current Supply</div>
+            <div class="stat-figure">{{ chain.current_supply }}</div>
+            <div class="stat-sub">{{ chain.current_sbd_supply }}</div>
+            <div class="stat-divider"></div>
+            <div class="stat-row">
+              <span class="stat-label">Virtual</span>
+              <span class="stat-value">{{ chain.virtual_supply }}</span>
             </div>
           </div>
-          <div v-else>
-            <div class="loader"></div>
+
+          <div class="s-card"
+            v-motion
+            :initial="{ opacity: 0, x: -24 }"
+            :enter="{ opacity: 1, x: 0, transition: { type: 'spring', stiffness: 280, damping: 22, delay: 120 } }"
+          >
+            <div class="card-eyebrow">Serey Price</div>
+            <div v-if="sereyPrice" class="stat-figure">{{ sereyPrice }} <span class="stat-currency">USD</span></div>
+            <div v-else class="stat-figure muted">—</div>
           </div>
-          <div v-if="exists.globals && exists.reward">
-            <div class="card">
-              <div class="title">Reward fund</div><br>
-              {{ chain.reward_balance }} {{ STEEM_SYMBOL }}<br>
-              ({{ chain.reward_percent ? chain.reward_percent.toFixed(2) : '0' }}% of virtual sup.)<br>
-              for next 15 days<br>
-              <hr>
-              {{ chain.reward_balance_day }} per day<br>
-              vote of {{ chain.vote_value_1000_sp ? chain.vote_value_1000_sp.toFixed(3) : '0' }} per 1000 {{ SP_SYMBOL }}<br>
-              <hr>
-              recent claims {{ chain.recent_claims }}
+
+          <div class="s-card"
+            v-motion
+            :initial="{ opacity: 0, x: -24 }"
+            :enter="{ opacity: 1, x: 0, transition: { type: 'spring', stiffness: 280, damping: 22, delay: 180 } }"
+          >
+            <div class="card-eyebrow">Inflation</div>
+            <div class="stat-figure">{{ chain.current_inflation_rate }}</div>
+            <div class="stat-sub">Annual rate</div>
+            <div class="stat-divider"></div>
+            <div class="stat-row">
+              <span class="stat-label">Per day</span>
+              <span class="stat-value">{{ chain.new_steem_per_day }}</span>
             </div>
           </div>
-          <div v-else>
-            <div class="loader"></div>
-          </div>
-        </div>
-        <div class="col-md-9">
-          <div class="last-blocks">
-            <div v-if="lastBlocks.length > 0">
-              <h2>Last Blocks</h2>
-              <transition-group name="list-blocks" tag="div" class="block-group">
-                <div v-for="b in lastBlocks" :key="b.block_num" class="list-blocks-item">
-                  <div class="block-left">
-                    <router-link :to="EXPLORER + 'b/' + b.block_num">{{ b.block_num }}</router-link>
-                    <span v-if="b.loaded">
-                      - {{ b.size_txs }} transactions
-                      <span v-if="b.size_posts > 0">({{ b.size_posts }} posts)</span>
-                    </span>
-                    <span v-else>loading...</span>
-                  </div>
-                  <div class="block-right">
-                    <span class="small">witness</span><br>
-                    <router-link :to="EXPLORER + '@' + b.witness">{{ b.witness }}</router-link>
-                  </div>
-                </div>
-              </transition-group>
+
+          <div class="s-card"
+            v-motion
+            :initial="{ opacity: 0, x: -24 }"
+            :enter="{ opacity: 1, x: 0, transition: { type: 'spring', stiffness: 280, damping: 22, delay: 240 } }"
+          >
+            <div class="card-eyebrow">Stake</div>
+            <div class="stat-figure">{{ chain.total_vesting_fund_steem }}</div>
+            <div class="stat-divider"></div>
+            <div class="stat-row">
+              <span class="stat-label">% of virtual</span>
+              <span class="stat-value">{{ chain.sp_percent ? chain.sp_percent.toFixed(2) : '0' }}%</span>
             </div>
-            <div v-else>
-              <div class="loader"></div>
+            <div class="stat-row">
+              <span class="stat-label">Shares</span>
+              <span class="stat-value mono">{{ chain.total_vesting_shares }}</span>
+            </div>
+            <div class="stat-row">
+              <span class="stat-label">Per MVESTS</span>
+              <span class="stat-value mono">{{ chain.steem_per_mvests ? chain.steem_per_mvests.toFixed(3) : '0' }} {{ STEEM_SYMBOL }}</span>
             </div>
           </div>
-          <div v-if="exists.schedule" class="schedule">
-            <h2>Schedule</h2>
-            <transition-group name="list-schedule" tag="div">
-              <div v-for="wit in schedule" :key="wit" class="list-schedule-item">
-                {{ wit }}
+        </template>
+        <template v-else>
+          <div class="s-card skeleton-card tall"></div>
+          <div class="s-card skeleton-card medium"></div>
+          <div class="s-card skeleton-card medium"></div>
+          <div class="s-card skeleton-card medium"></div>
+        </template>
+
+        <template v-if="exists.reward">
+          <div class="s-card"
+            v-motion
+            :initial="{ opacity: 0, x: -24 }"
+            :enter="{ opacity: 1, x: 0, transition: { type: 'spring', stiffness: 280, damping: 22, delay: 300 } }"
+          >
+            <div class="card-eyebrow">Reward Fund</div>
+            <div class="stat-figure">{{ chain.reward_balance }} <span class="stat-currency">{{ STEEM_SYMBOL }}</span></div>
+            <div class="stat-divider"></div>
+            <div class="stat-row">
+              <span class="stat-label">Per day</span>
+              <span class="stat-value mono">{{ chain.reward_balance_day }}</span>
+            </div>
+            <div class="stat-row">
+              <span class="stat-label">Vote / 1k {{ SP_SYMBOL }}</span>
+              <span class="stat-value mono">{{ chain.vote_value_1000_sp ? chain.vote_value_1000_sp.toFixed(3) : '0' }}</span>
+            </div>
+            <div class="stat-row">
+              <span class="stat-label">% of virtual</span>
+              <span class="stat-value">{{ chain.reward_percent ? chain.reward_percent.toFixed(2) : '0' }}%</span>
+            </div>
+            <div class="stat-row">
+              <span class="stat-label">Recent claims</span>
+              <span class="stat-value mono small">{{ chain.recent_claims }}</span>
+            </div>
+          </div>
+        </template>
+        <template v-else>
+          <div class="s-card skeleton-card medium"></div>
+        </template>
+
+      </aside>
+
+      <!-- ── CENTER: Last Blocks ── -->
+      <main class="home-main">
+        <div v-if="alertsStore.info"    class="page-alert info">{{ alertsStore.infoText }}</div>
+        <div v-if="alertsStore.success" class="page-alert success" v-html="alertsStore.successText"></div>
+        <div v-if="alertsStore.danger"  class="page-alert danger">{{ alertsStore.dangerText }}</div>
+
+        <h2 class="section-hdg"
+          v-motion
+          :initial="{ opacity: 0, y: -10 }"
+          :enter="{ opacity: 1, y: 0, transition: { type: 'spring', stiffness: 300, damping: 26, delay: 40 } }"
+        >
+          <span class="accent-dot"></span> Last Blocks
+        </h2>
+
+        <div v-if="lastBlocks.length > 0" class="block-list">
+          <transition-group name="block-slide" tag="div">
+            <div
+              v-for="b in lastBlocks"
+              :key="b.block_num"
+              class="block-row"
+            >
+              <div class="block-num-wrap">
+                <router-link :to="EXPLORER + 'b/' + b.block_num" class="block-num">#{{ b.block_num }}</router-link>
               </div>
-            </transition-group>
-          </div>
-          <div v-else>
-            <div class="loader"></div>
-          </div>
+              <div class="block-txs">
+                <template v-if="b.loaded">
+                  <span class="tx-count">{{ b.size_txs }}</span>
+                  <span class="tx-label">{{ b.size_txs === 1 ? 'transaction' : 'transactions' }}</span>
+                  <span v-if="b.size_posts > 0" class="tx-posts">· {{ b.size_posts }} post{{ b.size_posts > 1 ? 's' : '' }}</span>
+                </template>
+                <span v-else class="loading-dot">···</span>
+              </div>
+              <div class="block-witness-wrap">
+                <span class="witness-label">witness</span>
+                <router-link :to="EXPLORER + '@' + b.witness" class="witness-name">{{ b.witness }}</router-link>
+              </div>
+            </div>
+          </transition-group>
         </div>
-      </div>
-      <div v-if="alertsStore.info" class="alert alert-info" role="alert">{{ alertsStore.infoText }}</div>
-      <div v-if="alertsStore.success" class="alert alert-success" role="alert" v-html="alertsStore.successText"></div>
-      <div v-if="alertsStore.danger" class="alert alert-danger" role="alert">{{ alertsStore.dangerText }}</div>
+        <div v-else class="skeleton-blocks">
+          <div v-for="i in 10" :key="i" class="skeleton-row"></div>
+        </div>
+      </main>
+
+      <!-- ── RIGHT: Witness Schedule ── -->
+      <aside class="home-schedule">
+        <h2 class="section-hdg"
+          v-motion
+          :initial="{ opacity: 0, y: -10 }"
+          :enter="{ opacity: 1, y: 0, transition: { type: 'spring', stiffness: 300, damping: 26, delay: 80 } }"
+        >
+          <span class="accent-dot"></span> Schedule
+        </h2>
+
+        <div v-if="exists.schedule" class="schedule-list">
+          <transition-group name="schedule-slide" tag="div">
+            <div
+              v-for="(wit, idx) in schedule"
+              :key="wit"
+              class="schedule-item"
+              :class="{ active: idx === 0 }"
+            >
+              <span v-if="idx === 0" class="schedule-badge">Next</span>
+              <router-link :to="EXPLORER + '@' + wit" class="schedule-name">{{ wit }}</router-link>
+            </div>
+          </transition-group>
+        </div>
+        <div v-else class="skeleton-schedule">
+          <div v-for="i in 21" :key="i" class="skeleton-schedule-item"></div>
+        </div>
+      </aside>
+
     </div>
   </div>
 </template>
@@ -257,65 +348,365 @@ export default {
 </script>
 
 <style scoped>
-.last-blocks {
-  width: calc(100% - 8rem - 60px);
-  display: inline-block;
-  vertical-align: top;
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+/* ── Page shell ── */
+.home-page {
+  background: #eef5fb;
+  min-height: 100vh;
+  font-family: 'Outfit', sans-serif;
 }
-.schedule {
-  width: 8rem;
-  display: inline-block;
-  vertical-align: top;
-  margin-left: 10px;
+
+/* ── 3-column grid ── */
+.home-layout {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 5rem;
+  display: grid;
+  grid-template-columns: 260px 1fr 160px;
+  gap: 1.5rem 2rem;
+  align-items: start;
 }
-.block-left {
-  display: inline-block;
-  margin: auto 0px;
-  width: 70%;
+
+/* ── Shared card ── */
+.s-card {
+  background: #ffffff;
+  border-radius: 14px;
+  box-shadow: 0 1px 2px rgba(14,14,82,.04), 0 4px 16px rgba(14,14,82,.06);
+  border: 1px solid #c8dff0;
+  padding: 1.25rem 1.4rem;
+  transition: box-shadow .25s, transform .25s;
 }
-.block-right {
-  display: inline-block;
-  width: 30%;
-  margin: auto 0px;
+.s-card:hover {
+  box-shadow: 0 2px 8px rgba(14,14,82,.06), 0 8px 32px rgba(14,14,82,.08);
+  transform: translateY(-2px);
+}
+.s-card + .s-card { margin-top: .85rem; }
+
+/* ── Sidebar ── */
+.home-sidebar {
+  position: sticky;
+  top: 1.5rem;
+}
+
+/* ── Card internals ── */
+.card-eyebrow {
+  font-size: .63rem;
+  font-weight: 800;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: #5878a0;
+  margin-bottom: .55rem;
+}
+
+.stat-figure {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #0e0e52;
+  line-height: 1.2;
+  word-break: break-all;
+}
+.stat-figure.muted { color: #5878a0; }
+.stat-currency {
+  font-size: .68rem;
+  font-weight: 700;
+  color: #5878a0;
+  letter-spacing: .06em;
+  margin-left: .2rem;
+  font-family: 'Outfit', sans-serif;
+}
+
+.stat-sub {
+  font-size: .72rem;
+  color: #5878a0;
+  font-family: 'JetBrains Mono', monospace;
+  margin-top: .2rem;
+  word-break: break-all;
+}
+
+.stat-divider {
+  height: 1px;
+  background: #c8dff0;
+  margin: .75rem 0;
+}
+
+.stat-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: .5rem;
+  padding: .28rem 0;
+  font-size: .76rem;
+  border-bottom: 1px solid #eef5fb;
+}
+.stat-row:last-child { border-bottom: none; }
+.stat-label { color: #5878a0; flex-shrink: 0; }
+.stat-value {
+  color: #0e0e52;
+  font-weight: 600;
   text-align: right;
+  word-break: break-all;
 }
-.small { font-size: 0.8rem; }
-.card {
-  display: block;
-  text-align: right;
-  font-family: monospace;
-  font-size: 1.2rem;
-  background-color: white;
-  border: solid 1px #dcdcdc;
-  padding: 8px 10px;
-  border-radius: 5px;
-  margin: 10px auto;
+.stat-value.mono {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .7rem;
 }
-.title { font-weight: bold; font-size: 1.3rem; }
-.block-group { height: 51rem; }
-.list-blocks-item {
-  transition: all 3s;
-  border: solid 1px #dcdcdc;
-  border-radius: 5px;
-  margin: 10px auto;
-  padding: 8px 10px;
-  display: block;
-  background-color: white;
-  height: 4rem;
+.stat-value.small { font-size: .65rem; }
+
+/* ── Skeleton cards ── */
+.skeleton-card {
+  animation: shimmer 1.6s ease-in-out infinite;
+  background: linear-gradient(90deg, #c8dff0 25%, #eef5fb 50%, #c8dff0 75%);
+  background-size: 200% 100%;
+  border: none;
 }
-.list-blocks-enter-active, .list-blocks-leave-active { opacity: 0; }
-.list-schedule-item {
-  transition: all 1s;
-  border: solid 1px #dcdcdc;
-  border-radius: 5px;
-  margin: 3px auto;
-  padding: 3px 5px;
-  display: block;
-  background-color: white;
+.skeleton-card.tall   { height: 160px; }
+.skeleton-card.medium { height: 110px; }
+
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }
-.list-schedule-enter-active { opacity: 0; }
-.list-schedule-leave-active { opacity: 0; transform: translateX(-8rem); position: absolute; }
-.green { color: green; }
-.orange { color: orange; }
-.red { color: red; }
+
+/* ── Section heading ── */
+.section-hdg {
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+  font-family: 'Outfit', sans-serif;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #0e0e52;
+  margin: 0 0 1rem;
+  letter-spacing: -.01em;
+}
+.accent-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #449dd1;
+  flex-shrink: 0;
+}
+
+/* ── Block list ── */
+.home-main { min-width: 0; }
+
+.block-list { display: flex; flex-direction: column; gap: .5rem; overflow: hidden; }
+
+.block-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 1rem;
+  background: #ffffff;
+  border: 1px solid #c8dff0;
+  border-radius: 12px;
+  padding: .75rem 1.1rem;
+  transition: box-shadow .2s, transform .2s, border-color .2s;
+}
+.block-row:hover {
+  border-color: #449dd1;
+  box-shadow: 0 2px 12px rgba(68,157,209,.14);
+}
+
+.block-num-wrap { flex-shrink: 0; }
+.block-num {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .9rem;
+  font-weight: 700;
+  color: #192bc2;
+  text-decoration: none;
+  transition: color .15s;
+}
+.block-num:hover { color: #449dd1; }
+
+.block-txs {
+  font-size: .8rem;
+  color: #5878a0;
+  font-family: 'Outfit', sans-serif;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tx-count {
+  font-weight: 700;
+  color: #0e0e52;
+  font-family: 'JetBrains Mono', monospace;
+  margin-right: .25rem;
+}
+.tx-label { color: #5878a0; }
+.tx-posts { color: #449dd1; margin-left: .4rem; }
+.loading-dot {
+  font-family: 'JetBrains Mono', monospace;
+  color: #b8d4ef;
+  letter-spacing: .1em;
+}
+
+.block-witness-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  flex-shrink: 0;
+}
+.witness-label {
+  font-size: .6rem;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: #b8d4ef;
+  font-family: 'Outfit', sans-serif;
+}
+.witness-name {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .78rem;
+  font-weight: 600;
+  color: #192bc2;
+  text-decoration: none;
+  transition: color .15s;
+}
+.witness-name:hover { color: #449dd1; }
+
+/* ── Skeleton blocks ── */
+.skeleton-blocks { display: flex; flex-direction: column; gap: .5rem; }
+.skeleton-row {
+  height: 56px;
+  border-radius: 12px;
+  background: linear-gradient(90deg, #c8dff0 25%, #eef5fb 50%, #c8dff0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.6s ease-in-out infinite;
+}
+
+/* ── Schedule ── */
+.home-schedule { min-width: 0; }
+
+.schedule-list {
+  display: flex;
+  flex-direction: column;
+  gap: .35rem;
+  max-height: 750px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #c8dff0 transparent;
+  padding-right: 2px;
+}
+.schedule-list::-webkit-scrollbar { width: 4px; }
+.schedule-list::-webkit-scrollbar-track { background: transparent; }
+.schedule-list::-webkit-scrollbar-thumb { background: #c8dff0; border-radius: 4px; }
+
+.schedule-item {
+  display: flex;
+  align-items: center;
+  gap: .45rem;
+  background: #ffffff;
+  border: 1px solid #c8dff0;
+  border-radius: 8px;
+  padding: .35rem .6rem;
+  transition: border-color .2s, box-shadow .2s;
+}
+.schedule-item.active {
+  border-color: #449dd1;
+  background: #f0f8ff;
+  box-shadow: 0 2px 8px rgba(68,157,209,.14);
+}
+.schedule-item:hover {
+  border-color: #449dd1;
+}
+
+.schedule-badge {
+  font-size: .55rem;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: #ffffff;
+  background: #449dd1;
+  padding: .1em .4em;
+  border-radius: 3px;
+  flex-shrink: 0;
+  font-family: 'Outfit', sans-serif;
+}
+
+.schedule-name {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .72rem;
+  font-weight: 500;
+  color: #0e0e52;
+  text-decoration: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: color .15s;
+}
+.schedule-name:hover { color: #449dd1; }
+
+/* ── Skeleton schedule ── */
+.skeleton-schedule { display: flex; flex-direction: column; gap: .35rem; }
+.skeleton-schedule-item {
+  height: 32px;
+  border-radius: 8px;
+  background: linear-gradient(90deg, #c8dff0 25%, #eef5fb 50%, #c8dff0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.6s ease-in-out infinite;
+}
+
+/* ── Alerts ── */
+.page-alert {
+  border-radius: 10px;
+  padding: .7rem 1rem;
+  margin-bottom: 1rem;
+  font-size: .85rem;
+  font-family: 'Outfit', sans-serif;
+}
+.page-alert.info    { background: #eff6ff; color: #1e40af; border: 1px solid #93c5fd; }
+.page-alert.success { background: #f0fdf4; color: #166534; border: 1px solid #86efac; }
+.page-alert.danger  { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+
+/* ── Block transition ── */
+.block-slide-enter-active { transition: opacity .4s ease, transform .4s cubic-bezier(.34,1.26,.64,1); }
+.block-slide-enter-from   { opacity: 0; transform: translateY(-12px); }
+.block-slide-leave-active { transition: opacity .2s ease; }
+.block-slide-leave-to     { opacity: 0; }
+
+/* ── Schedule transition ── */
+.schedule-slide-enter-active { transition: opacity .3s ease; }
+.schedule-slide-enter-from   { opacity: 0; }
+.schedule-slide-leave-active { transition: opacity .2s ease; position: absolute; }
+.schedule-slide-leave-to     { opacity: 0; }
+
+/* ── Responsive ── */
+@media (max-width: 1024px) {
+  .home-layout {
+    grid-template-columns: 200px 1fr 140px;
+    gap: 1rem 1.25rem;
+    padding: 1.5rem 1rem 4rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .home-layout {
+    grid-template-columns: 1fr;
+    padding: 1rem 1rem 3rem;
+    gap: 1rem;
+  }
+  .home-sidebar {
+    position: static;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: .75rem;
+  }
+  .home-sidebar .s-card + .s-card { margin-top: 0; }
+  .home-schedule { order: 3; }
+  .schedule-list { max-height: 300px; }
+}
+
+@media (max-width: 500px) {
+  .home-layout { padding: .75rem .75rem 2.5rem; }
+  .home-sidebar { grid-template-columns: 1fr; }
+  .stat-figure { font-size: .95rem; }
+  .block-row { padding: .6rem .75rem; gap: .6rem; }
+  .block-num { font-size: .82rem; }
+  .block-txs { font-size: .75rem; }
+  .witness-name { font-size: .72rem; }
+}
 </style>

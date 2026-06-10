@@ -1,64 +1,65 @@
 <template>
   <div class="trx">
-    <div class="tx-link">
-      <router-link :to="EXPLORER + 'b/' + blockNum + '/' + trx_id">{{ trx_id.substring(0, 7) }}</router-link>
+    <div class="tx-badge">
+      <router-link v-if="!isVirtual" :to="EXPLORER + 'b/' + blockNum + '/' + trx_id" class="tx-id">{{ trx_id.substring(0, 7) }}</router-link>
+      <span v-else class="tx-id virtual">virtual</span>
     </div>
-    <span class="operation break-word">
+    <div class="tx-body">
       <div v-if="typeOp === 'curation_reward'">
-        <router-link :to="EXPLORER + '@' + op.curator">{{ op.curator }}</router-link> curation reward: {{ vests2sp(op.reward) }} for <router-link :to="EXPLORER + link(op.comment_author, op.comment_permlink)">{{ linkCut(op.comment_author, op.comment_permlink) }}</router-link> - {{ op.time }}
+        <router-link :to="EXPLORER + '@' + op.curator" class="tx-link">{{ op.curator }}</router-link> curation reward: {{ vests2sp(op.reward) }} for <router-link :to="EXPLORER + link(op.comment_author, op.comment_permlink)" class="tx-link">{{ linkCut(op.comment_author, op.comment_permlink) }}</router-link> <span class="tx-time">{{ op.time }}</span>
       </div>
       <div v-else-if="typeOp === 'vote'">
-        <router-link :to="EXPLORER + '@' + op.voter">{{ op.voter }}</router-link> upvote <router-link :to="EXPLORER + link(op.author, op.permlink)">{{ linkCut(op.author, op.permlink) }}</router-link> ({{ (op.weight / 100).toFixed(2) }}%) - {{ op.time }}
+        <router-link :to="EXPLORER + '@' + op.voter" class="tx-link">{{ op.voter }}</router-link> upvoted <router-link :to="EXPLORER + link(op.author, op.permlink)" class="tx-link">{{ linkCut(op.author, op.permlink) }}</router-link> ({{ (op.weight / 100).toFixed(2) }}%) <span class="tx-time">{{ op.time }}</span>
       </div>
       <div v-else-if="typeOp === 'transfer'">
-        <router-link :to="EXPLORER + '@' + op.from">{{ op.from }}</router-link> transfer {{ op.amount }} to <router-link :to="EXPLORER + '@' + op.to">{{ op.to }}</router-link>. Memo: <span class="memo">{{ op.memo }}</span> - {{ op.time }}
+        <router-link :to="EXPLORER + '@' + op.from" class="tx-link">{{ op.from }}</router-link> transferred {{ op.amount }} to <router-link :to="EXPLORER + '@' + op.to" class="tx-link">{{ op.to }}</router-link><template v-if="op.memo"> · <span class="tx-memo">{{ op.memo }}</span></template> <span class="tx-time">{{ op.time }}</span>
       </div>
       <div v-else-if="typeOp === 'delegate_vesting_shares'">
-        <router-link :to="EXPLORER + '@' + op.delegator">{{ op.delegator }}</router-link> delegate <router-link :to="EXPLORER + '@' + op.delegatee">{{ op.delegatee }}</router-link> {{ vests2sp(op.vesting_shares) }} - {{ op.time }}
+        <router-link :to="EXPLORER + '@' + op.delegator" class="tx-link">{{ op.delegator }}</router-link> delegated {{ vests2sp(op.vesting_shares) }} to <router-link :to="EXPLORER + '@' + op.delegatee" class="tx-link">{{ op.delegatee }}</router-link> <span class="tx-time">{{ op.time }}</span>
       </div>
       <div v-else-if="typeOp === 'comment' && op.parent_author !== ''">
-        <router-link :to="EXPLORER + '@' + op.author">{{ op.author }}</router-link> replied to <router-link :to="EXPLORER + link(op.parent_author, op.parent_permlink)">{{ linkCut(op.parent_author, op.parent_permlink) }}</router-link>. <span class="memo">{{ op.body ? op.body.substring(0, 140) + (op.body.length > 140 ? '...' : '') : '' }}</span> - {{ op.time }}
+        <router-link :to="EXPLORER + '@' + op.author" class="tx-link">{{ op.author }}</router-link> replied to <router-link :to="EXPLORER + link(op.parent_author, op.parent_permlink)" class="tx-link">{{ linkCut(op.parent_author, op.parent_permlink) }}</router-link> <span class="tx-time">{{ op.time }}</span>
       </div>
       <div v-else-if="typeOp === 'comment' && op.parent_author === ''">
-        <router-link :to="EXPLORER + '@' + op.author">{{ op.author }}</router-link> authored a post: <router-link :to="EXPLORER + link(op.author, op.permlink)">{{ linkCut(op.author, op.permlink) }}</router-link> - {{ op.time }}
+        <router-link :to="EXPLORER + '@' + op.author" class="tx-link">{{ op.author }}</router-link> authored a post: <router-link :to="EXPLORER + link(op.author, op.permlink)" class="tx-link">{{ linkCut(op.author, op.permlink) }}</router-link> <span class="tx-time">{{ op.time }}</span>
       </div>
       <div v-else-if="typeOp === 'transfer_to_vesting'">
-        <router-link :to="EXPLORER + '@' + op.from">{{ op.from }}</router-link> power up {{ op.amount }} to <router-link :to="EXPLORER + '@' + op.to">{{ op.to }}</router-link> - {{ op.time }}
+        <router-link :to="EXPLORER + '@' + op.from" class="tx-link">{{ op.from }}</router-link> powered up {{ op.amount }} to <router-link :to="EXPLORER + '@' + op.to" class="tx-link">{{ op.to }}</router-link> <span class="tx-time">{{ op.time }}</span>
       </div>
       <div v-else-if="typeOp === 'withdraw_vesting'">
-        <router-link :to="EXPLORER + '@' + op.account">{{ op.account }}</router-link> start power down {{ vests2sp(op.vesting_shares) }} - {{ op.time }}
+        <router-link :to="EXPLORER + '@' + op.account" class="tx-link">{{ op.account }}</router-link> started power down {{ vests2sp(op.vesting_shares) }} <span class="tx-time">{{ op.time }}</span>
       </div>
       <div v-else-if="typeOp === 'fill_vesting_withdraw'">
-        <router-link :to="EXPLORER + '@' + op.from_account">{{ op.from_account }}</router-link> withdraw {{ op.withdrawn }} as {{ op.deposited }} - {{ op.time }}
+        <router-link :to="EXPLORER + '@' + op.from_account" class="tx-link">{{ op.from_account }}</router-link> withdrew {{ op.withdrawn }} as {{ op.deposited }} <span class="tx-time">{{ op.time }}</span>
       </div>
       <div v-else-if="typeOp === 'return_vesting_delegation'">
-        <router-link :to="EXPLORER + '@' + op.account">{{ op.account }}</router-link> return of {{ vests2sp(op.vesting_shares) }} delegation - {{ op.time }}
+        <router-link :to="EXPLORER + '@' + op.account" class="tx-link">{{ op.account }}</router-link> return of {{ vests2sp(op.vesting_shares) }} delegation <span class="tx-time">{{ op.time }}</span>
       </div>
       <div v-else-if="typeOp === 'account_create'">
-        <router-link :to="EXPLORER + '@' + op.creator">{{ op.creator }}</router-link> create account <router-link :to="EXPLORER + '@' + op.new_account_name">{{ op.new_account_name }}</router-link>. Fee: {{ op.fee }}. - {{ op.time }}
+        <router-link :to="EXPLORER + '@' + op.creator" class="tx-link">{{ op.creator }}</router-link> created account <router-link :to="EXPLORER + '@' + op.new_account_name" class="tx-link">{{ op.new_account_name }}</router-link> · fee: {{ op.fee }} <span class="tx-time">{{ op.time }}</span>
       </div>
       <div v-else-if="typeOp === 'producer_reward'">
-        <router-link :to="EXPLORER + '@' + op.producer">{{ op.producer }}</router-link> producer reward: {{ vests2sp(op.vesting_shares) }} - {{ op.time }}
+        <router-link :to="EXPLORER + '@' + op.producer" class="tx-link">{{ op.producer }}</router-link> producer reward: {{ vests2sp(op.vesting_shares) }} <span class="tx-time">{{ op.time }}</span>
       </div>
       <div v-else-if="typeOp === 'feed_publish'">
-        <router-link :to="EXPLORER + '@' + op.publisher">{{ op.publisher }}</router-link> feed price ${{ feedPrice }} - {{ op.time }}
+        <router-link :to="EXPLORER + '@' + op.publisher" class="tx-link">{{ op.publisher }}</router-link> feed price ${{ feedPrice }} <span class="tx-time">{{ op.time }}</span>
       </div>
       <div v-else-if="typeOp === 'witness_update'">
-        <router-link :to="EXPLORER + '@' + op.owner">{{ op.owner }}</router-link> update witness. Creation fee: {{ op.props ? op.props.account_creation_fee : '' }} - {{ op.time }}
+        <router-link :to="EXPLORER + '@' + op.owner" class="tx-link">{{ op.owner }}</router-link> updated witness · creation fee: {{ op.props ? op.props.account_creation_fee : '' }} <span class="tx-time">{{ op.time }}</span>
       </div>
       <div v-else-if="typeOp === 'account_witness_vote'">
-        <router-link :to="EXPLORER + '@' + op.account">{{ op.account }}</router-link><span v-if="op.approve"> approve</span><span v-else> unapprove</span> witness <router-link :to="EXPLORER + '@' + op.witness">{{ op.witness }}</router-link> - {{ op.time }}
+        <router-link :to="EXPLORER + '@' + op.account" class="tx-link">{{ op.account }}</router-link><span v-if="op.approve"> approved</span><span v-else> unapproved</span> witness <router-link :to="EXPLORER + '@' + op.witness" class="tx-link">{{ op.witness }}</router-link> <span class="tx-time">{{ op.time }}</span>
       </div>
       <div v-else-if="typeOp === 'claim_reward_balance'">
-        <router-link :to="EXPLORER + '@' + op.account">{{ op.account }}</router-link> claim reward: {{ vests2sp(op.reward_vests) }} - {{ op.time }}
+        <router-link :to="EXPLORER + '@' + op.account" class="tx-link">{{ op.account }}</router-link> claimed reward: {{ vests2sp(op.reward_vests) }} <span class="tx-time">{{ op.time }}</span>
       </div>
       <div v-else-if="typeOp === 'custom_json' && op.id === 'follow' && Array.isArray(op.json) && op.json[0] === 'reblog'">
-        <router-link :to="EXPLORER + '@' + op.json[1].account">{{ op.json[1].account }}</router-link> reblog <router-link :to="EXPLORER + link(op.json[1].author, op.json[1].permlink)">{{ linkCut(op.json[1].author, op.json[1].permlink) }}</router-link> - {{ op.time }}
+        <router-link :to="EXPLORER + '@' + op.json[1].account" class="tx-link">{{ op.json[1].account }}</router-link> reblogged <router-link :to="EXPLORER + link(op.json[1].author, op.json[1].permlink)" class="tx-link">{{ linkCut(op.json[1].author, op.json[1].permlink) }}</router-link> <span class="tx-time">{{ op.time }}</span>
       </div>
       <div v-else-if="typeOp === 'custom_json' && op.id === 'follow' && Array.isArray(op.json) && op.json[0] === 'follow'">
-        <router-link :to="EXPLORER + '@' + op.json[1].follower">{{ op.json[1].follower }}</router-link>
-        <span v-if="op.json[1].what && op.json[1].what.length > 0 && op.json[1].what[0] === 'blog'"> follow</span>
-        <span v-else> unfollow</span> {{ op.json[1].following }} - {{ op.time }}
+        <router-link :to="EXPLORER + '@' + op.json[1].follower" class="tx-link">{{ op.json[1].follower }}</router-link>
+        <span v-if="op.json[1].what && op.json[1].what.length > 0 && op.json[1].what[0] === 'blog'"> followed</span>
+        <span v-else> unfollowed</span> {{ op.json[1].following }} <span class="tx-time">{{ op.time }}</span>
       </div>
       <div v-else-if="typeOp === 'custom_json'">
         <card-data :data="op.json" :title="'custom: ' + op.id" />
@@ -66,7 +67,7 @@
       <div v-else>
         <card-data :data="op" :title="typeOp" />
       </div>
-    </span>
+    </div>
   </div>
 </template>
 
@@ -100,6 +101,9 @@ export default {
   },
 
   computed: {
+    isVirtual() {
+      return !this.trx_id || /^0+$/.test(this.trx_id)
+    },
     feedPrice() {
       if (!this.op.exchange_rate) return ''
       const rate = this.op.exchange_rate
@@ -155,23 +159,78 @@ export default {
 
 <style scoped>
 .trx {
-  border: solid 1px #dcdcdc;
-  border-radius: 5px;
-  margin: 10px auto;
-  display: block;
-  background-color: white;
+  display: flex;
+  align-items: center;
+  gap: .85rem;
+  background: #ffffff;
+  border: 1px solid #c8dff0;
+  border-radius: 10px;
+  padding: .65rem 1rem;
+  margin-bottom: .45rem;
+  transition: border-color .18s, box-shadow .18s;
+  font-family: 'Outfit', sans-serif;
 }
-.trx:hover { box-shadow: 0px 0px 2px #72b4e8; }
+.trx:hover {
+  border-color: #449dd1;
+  box-shadow: 0 2px 10px rgba(68,157,209,.12);
+}
+
+.tx-badge { flex-shrink: 0; }
+
+.tx-id {
+  display: inline-block;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .68rem;
+  font-weight: 600;
+  color: #5878a0;
+  background: #eef5fb;
+  border: 1px solid #c8dff0;
+  border-radius: 6px;
+  padding: .2em .55em;
+  text-decoration: none;
+  transition: color .15s, border-color .15s;
+  white-space: nowrap;
+}
+.tx-id:hover { color: #192bc2; border-color: #449dd1; }
+
+.tx-id.virtual {
+  color: #5878a0;
+  background: #f4f9fd;
+  border-color: #c8dff0;
+  cursor: default;
+  font-style: italic;
+}
+
+.tx-body {
+  flex: 1;
+  font-size: .82rem;
+  color: #0e0e52;
+  min-width: 0;
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
 .tx-link {
-  float: right;
-  font-size: 0.9rem;
-  font-family: monospace;
-  margin-left: 8px;
-  padding: 5px;
-  background-color: #f1ffc2;
+  color: #192bc2;
+  text-decoration: none;
+  font-weight: 600;
+  transition: color .15s;
 }
-.tx-link a { text-decoration: none; color: #8a8a8a; }
-.operation { display: block; padding: 8px 10px; overflow-wrap: break-word; }
-.operation a { text-decoration: none; }
-.memo { color: #bb5050; font-family: monospace; font-size: larger; }
+.tx-link:hover { color: #449dd1; }
+
+.tx-time {
+  float: right;
+  margin-left: 1rem;
+  color: #5878a0;
+  font-size: .72rem;
+  font-family: 'JetBrains Mono', monospace;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.tx-memo {
+  color: #dc2626;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .78rem;
+}
 </style>

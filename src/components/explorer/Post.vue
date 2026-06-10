@@ -35,6 +35,60 @@
     <Transition name="fade-in" mode="out-in">
       <div v-if="exists" class="post-layout" key="content">
 
+        <!-- ── CONTENT PASSPORT — spans full width, top row ── -->
+        <div
+          class="passport-bar"
+          v-motion
+          :initial="{ opacity: 0, y: -12 }"
+          :enter="{ opacity: 1, y: 0, transition: { type: 'spring', stiffness: 300, damping: 26, delay: 60 } }"
+        >
+          <div class="pb-brand">
+            <svg class="pb-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            </svg>
+            <span class="pb-title">Content Ownership</span>
+          </div>
+
+          <div class="pb-fields">
+            <div class="pb-field">
+              <span class="pb-key">Author</span>
+              <router-link :to="EXPLORER + '@' + post.author" class="pb-val link">@{{ post.author }}</router-link>
+            </div>
+            <div class="pb-dot">·</div>
+            <div class="pb-field">
+              <span class="pb-key">Published</span>
+              <span class="pb-val">{{ formatDate(post.created) }}</span>
+            </div>
+            <div class="pb-dot">·</div>
+            <div class="pb-field">
+              <span class="pb-key">Hash</span>
+              <span class="pb-chip intact">✓ Intact</span>
+            </div>
+            <div class="pb-dot">·</div>
+            <div class="pb-field">
+              <span class="pb-key">AI</span>
+              <span :class="['pb-chip', passportMeta.aiGenerated === true ? 'ai-yes' : passportMeta.aiGenerated === false ? 'ai-no' : 'unknown']">
+                {{ passportMeta.aiGenerated === true ? 'Yes' : passportMeta.aiGenerated === false ? 'No' : 'Unknown' }}
+              </span>
+            </div>
+            <div class="pb-dot">·</div>
+            <div class="pb-field">
+              <span class="pb-key">TX</span>
+              <span class="pb-val mono">#{{ post.id }}</span>
+            </div>
+          </div>
+
+          <button class="pb-share" @click="sharePost">
+            <span class="pb-share-inner">
+              <svg class="pb-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+                <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+              </svg>
+              Share
+            </span>
+          </button>
+        </div>
+
         <!-- ── SIDEBAR ── -->
         <aside class="post-sidebar">
           <div
@@ -46,7 +100,7 @@
             <div class="author-avatar" :style="authorAvatarStyle"></div>
             <router-link :to="EXPLORER + '@' + post.author" class="author-handle">@{{ post.author }}</router-link>
             <a :href="`https://serey.io/authors/${post.author}/${post.permlink}`" target="_blank" rel="noopener" class="btn-serey">
-              View on Serey.io ↗
+              <span>View on Serey.io ↗</span>
             </a>
           </div>
 
@@ -86,80 +140,25 @@
           <div v-if="alertsStore.danger" class="page-alert danger">{{ alertsStore.dangerText }}</div>
           <div v-if="alertsStore.info" class="page-alert info">{{ alertsStore.infoText }}</div>
 
-          <!-- Title -->
-          <header
-            class="post-hero"
-            v-motion
-            :initial="{ opacity: 0, y: 24 }"
-            :enter="{ opacity: 1, y: 0, transition: { type: 'spring', stiffness: 260, damping: 24, delay: 120 } }"
-          >
-            <h1 v-if="post.depth === 0" class="post-title">{{ post.title }}</h1>
-            <template v-else>
-              <h1 class="post-title">Comment</h1>
-              <div class="comment-breadcrumbs">
-                <router-link v-if="post.depth > 1" :to="EXPLORER + '@' + post.parent_author + '/' + post.parent_permlink">← Parent Comment</router-link>
-                <router-link :to="EXPLORER + '@' + post.root_author + '/' + post.root_permlink">↑ Root Post</router-link>
-              </div>
-            </template>
-          </header>
-
-          <!-- Content Passport — single row strip -->
+          <!-- Title + Body — single card -->
           <div
-            class="passport-bar"
+            class="post-card"
             v-motion
-            :initial="{ opacity: 0, y: 16 }"
-            :enter="{ opacity: 1, y: 0, transition: { type: 'spring', stiffness: 260, damping: 26, delay: 200 } }"
+            :initial="{ opacity: 0, y: 20 }"
+            :enter="{ opacity: 1, y: 0, transition: { type: 'spring', stiffness: 260, damping: 24, delay: 100 } }"
           >
-            <div class="pb-brand">
-              <svg class="pb-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-              </svg>
-              <span class="pb-title">Content Passport</span>
-            </div>
-
-            <div class="pb-fields">
-              <div class="pb-field">
-                <span class="pb-key">Author</span>
-                <router-link :to="EXPLORER + '@' + post.author" class="pb-val link">@{{ post.author }}</router-link>
-              </div>
-              <div class="pb-dot">·</div>
-              <div class="pb-field">
-                <span class="pb-key">Published</span>
-                <span class="pb-val">{{ formatDate(post.created) }}</span>
-              </div>
-              <div class="pb-dot">·</div>
-              <div class="pb-field">
-                <span class="pb-key">Hash</span>
-                <span class="pb-chip intact">✓ Intact</span>
-              </div>
-              <div class="pb-dot">·</div>
-              <div class="pb-field">
-                <span class="pb-key">AI</span>
-                <span :class="['pb-chip', passportMeta.aiGenerated === true ? 'ai-yes' : passportMeta.aiGenerated === false ? 'ai-no' : 'unknown']">
-                  {{ passportMeta.aiGenerated === true ? 'Yes' : passportMeta.aiGenerated === false ? 'No' : 'Unknown' }}
-                </span>
-              </div>
-              <div class="pb-dot">·</div>
-              <div class="pb-field">
-                <span class="pb-key">TX</span>
-                <span class="pb-val mono">#{{ post.id }}</span>
-              </div>
-            </div>
-
-            <div class="pb-verified">
-              <span class="pb-pulse"></span>
-              On-Chain Verified
-            </div>
+            <header v-if="post.depth !== 0 || post.title" class="post-hero">
+              <h1 v-if="post.depth === 0" class="post-title">{{ post.title }}</h1>
+              <template v-else>
+                <h1 class="post-title">Comment</h1>
+                <div class="comment-breadcrumbs">
+                  <router-link v-if="post.depth > 1" :to="EXPLORER + '@' + post.parent_author + '/' + post.parent_permlink">← Parent Comment</router-link>
+                  <router-link :to="EXPLORER + '@' + post.root_author + '/' + post.root_permlink">↑ Root Post</router-link>
+                </div>
+              </template>
+            </header>
+            <article class="post-body" v-html="postDetail ? postDetail.description : post.body"></article>
           </div>
-
-          <!-- Body -->
-          <article
-            class="post-body"
-            v-motion
-            :initial="{ opacity: 0, y: 30 }"
-            :enter="{ opacity: 1, y: 0, transition: { type: 'spring', stiffness: 220, damping: 26, delay: 280 } }"
-            v-html="postDetail ? postDetail.description : post.body"
-          ></article>
 
           <div class="post-divider"></div>
 
@@ -281,6 +280,14 @@ export default {
   },
 
   methods: {
+    sharePost() {
+      if (navigator.share) {
+        navigator.share({ title: this.post?.title || 'Serey Post', url: window.location.href })
+      } else {
+        navigator.clipboard.writeText(window.location.href)
+      }
+    },
+
     onScroll() {
       const scrolled = window.scrollY
       const total = document.documentElement.scrollHeight - window.innerHeight
@@ -411,7 +418,7 @@ export default {
   left: 0;
   width: 100%;
   height: 3px;
-  background: linear-gradient(90deg, #0d9488, #10b981, #5eead4);
+  background: linear-gradient(90deg, #150578, #192bc2, #449dd1, #78c0e0);
   transform-origin: left;
   transform: scaleX(0);
   z-index: 9999;
@@ -419,18 +426,20 @@ export default {
   border-radius: 0 2px 2px 0;
 }
 
-/* ── Design tokens ── */
-/* accent:   #0d9488  teal-600                    */
-/* accent-2: #059669  emerald-600 (gradient end)  */
-/* bg:       #f1f5f9  slate-100                   */
+/* ── Design tokens — Blue Lagoon palette ── */
+/* accent:   #449dd1  Blue Bell                   */
+/* accent-2: #192bc2  Persian Blue (gradient end) */
+/* accent-3: #78c0e0  Sky Blue (light)            */
+/* navy:     #150578  Navy                        */
+/* twilight: #0e0e52  Deep Twilight (text/dark)   */
+/* bg:       #eef5fb  light blue-tinted           */
 /* card:     #ffffff                               */
-/* text:     #0f172a  slate-900                   */
-/* muted:    #64748b  slate-500                   */
-/* border:   #e2e8f0  slate-200                   */
+/* muted:    #5878a0  blue-muted                  */
+/* border:   #c8dff0  blue-border                 */
 
 /* ── Page shell ── */
 .post-page {
-  background: #f1f5f9;
+  background: #eef5fb;
   min-height: 100vh;
   font-family: 'Outfit', sans-serif;
 }
@@ -454,7 +463,7 @@ export default {
 
 .skeleton-card {
   border-radius: 12px;
-  background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
+  background: linear-gradient(90deg, #c8dff0 25%, #eef5fb 50%, #c8dff0 75%);
   background-size: 200% 100%;
   animation: shimmer 1.6s ease-in-out infinite;
 }
@@ -464,7 +473,7 @@ export default {
 .skeleton-title {
   height: 60px;
   border-radius: 8px;
-  background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
+  background: linear-gradient(90deg, #c8dff0 25%, #eef5fb 50%, #c8dff0 75%);
   background-size: 200% 100%;
   animation: shimmer 1.6s ease-in-out infinite;
   width: 75%;
@@ -473,7 +482,7 @@ export default {
 .skeleton-body {
   background: #fff;
   border-radius: 12px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid #c8dff0;
   padding: 2.5rem;
   display: flex;
   flex-direction: column;
@@ -483,14 +492,14 @@ export default {
 .skeleton-line {
   height: 14px;
   border-radius: 6px;
-  background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
+  background: linear-gradient(90deg, #c8dff0 25%, #eef5fb 50%, #c8dff0 75%);
   background-size: 200% 100%;
   animation: shimmer 1.6s ease-in-out infinite;
 }
 .skeleton-img {
   height: 280px;
   border-radius: 10px;
-  background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
+  background: linear-gradient(90deg, #c8dff0 25%, #eef5fb 50%, #c8dff0 75%);
   background-size: 200% 100%;
   animation: shimmer 1.6s ease-in-out infinite;
   margin: .5rem 0;
@@ -513,8 +522,25 @@ export default {
   padding: 2rem 1.5rem 5rem;
   display: grid;
   grid-template-columns: 280px 1fr;
-  gap: 2rem;
+  grid-template-rows: auto auto;
+  gap: 1rem 2rem;
   align-items: start;
+}
+
+/* Passport spans both columns in the first row */
+.post-layout > .passport-bar {
+  grid-column: 1 / -1;
+  grid-row: 1;
+}
+
+.post-layout > .post-sidebar {
+  grid-column: 1;
+  grid-row: 2;
+}
+
+.post-layout > .post-main {
+  grid-column: 2;
+  grid-row: 2;
 }
 
 /* ── Sidebar ── */
@@ -529,13 +555,13 @@ export default {
 .s-card {
   background: #ffffff;
   border-radius: 14px;
-  box-shadow: 0 1px 2px rgba(15,23,42,.04), 0 4px 16px rgba(15,23,42,.06);
+  box-shadow: 0 1px 2px rgba(14,14,82,.04), 0 4px 16px rgba(14,14,82,.06);
   padding: 1.5rem;
-  border: 1px solid #e2e8f0;
+  border: 1px solid #c8dff0;
   transition: box-shadow .25s, transform .25s;
 }
 .s-card:hover {
-  box-shadow: 0 2px 8px rgba(15,23,42,.06), 0 8px 32px rgba(15,23,42,.08);
+  box-shadow: 0 2px 8px rgba(14,14,82,.06), 0 8px 32px rgba(14,14,82,.08);
   transform: translateY(-2px);
 }
 
@@ -547,15 +573,15 @@ export default {
   border-radius: 50%;
   background-size: cover;
   background-position: center;
-  background-color: #e2e8f0;
+  background-color: #c8dff0;
   margin: 0 auto 1rem;
-  border: 3px solid #0d9488;
-  box-shadow: 0 0 0 5px rgba(13,148,136,.1);
+  border: 3px solid #449dd1;
+  box-shadow: 0 0 0 5px rgba(68,157,209,.15);
   transition: box-shadow .25s, transform .25s;
 }
 .author-avatar:hover {
   transform: scale(1.05);
-  box-shadow: 0 0 0 7px rgba(13,148,136,.18);
+  box-shadow: 0 0 0 7px rgba(68,157,209,.28);
 }
 
 .author-handle {
@@ -563,32 +589,49 @@ export default {
   font-family: 'Outfit', sans-serif;
   font-weight: 600;
   font-size: 1rem;
-  color: #0f172a;
+  color: #0e0e52;
   text-decoration: none;
   margin-bottom: .9rem;
   transition: color .2s;
 }
-.author-handle:hover { color: #0d9488; }
+.author-handle:hover { color: #449dd1; }
 
 .btn-serey {
-  display: block;
-  background: linear-gradient(135deg, #0d9488, #059669);
-  color: #fff;
-  padding: .55rem 1rem;
-  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: .4rem;
+  background: #ffffff;
+  color: #192bc2;
+  padding: .6rem 1rem;
+  border-radius: 10px;
+  border: 1.5px solid #c8dff0;
   text-decoration: none;
   font-family: 'Outfit', sans-serif;
   font-size: .82rem;
-  font-weight: 600;
-  letter-spacing: .02em;
-  transition: opacity .2s, transform .15s, box-shadow .2s;
+  font-weight: 700;
+  letter-spacing: .01em;
+  box-shadow: 0 1px 4px rgba(14,14,82,.06);
+  position: relative;
+  overflow: hidden;
+  transition: border-color .25s, box-shadow .25s, color .25s;
 }
+.btn-serey::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(120deg, #dbeafe 0%, #93c5fd 50%, #78c0e0 100%);
+  transform: translateX(-100%);
+  transition: transform .35s cubic-bezier(.4,0,.2,1);
+  z-index: 0;
+}
+.btn-serey:hover::before { transform: translateX(0); }
 .btn-serey:hover {
-  color: #fff;
-  opacity: .9;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 18px rgba(13,148,136,.35);
+  color: #0e0e52;
+  border-color: #78c0e0;
+  box-shadow: 0 4px 18px rgba(120,192,224,.3);
 }
+.btn-serey span, .btn-serey > * { position: relative; z-index: 1; }
 
 /* Payout card */
 .payout-eyebrow {
@@ -596,7 +639,7 @@ export default {
   font-weight: 700;
   letter-spacing: .1em;
   text-transform: uppercase;
-  color: #64748b;
+  color: #5878a0;
   margin-bottom: .5rem;
   font-family: 'Outfit', sans-serif;
 }
@@ -604,13 +647,13 @@ export default {
   font-family: 'JetBrains Mono', monospace;
   font-size: 1.55rem;
   font-weight: 600;
-  color: #0f172a;
+  color: #0e0e52;
   line-height: 1.1;
   margin-bottom: .2rem;
   letter-spacing: -.02em;
 }
-.payout-sub { font-size: .78rem; color: #64748b; margin-bottom: .75rem; font-family: 'JetBrains Mono', monospace; }
-.payout-hr  { border: none; border-top: 1px solid #e2e8f0; margin: .75rem 0; }
+.payout-sub { font-size: .78rem; color: #5878a0; margin-bottom: .75rem; font-family: 'JetBrains Mono', monospace; }
+.payout-hr  { border: none; border-top: 1px solid #c8dff0; margin: .75rem 0; }
 .payout-line {
   display: flex;
   justify-content: space-between;
@@ -618,12 +661,12 @@ export default {
   gap: .5rem;
   padding: .3rem 0;
   font-size: .76rem;
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid #eef5fb;
   font-family: 'Outfit', sans-serif;
 }
 .payout-line:last-child { border-bottom: none; }
-.pl-key { color: #64748b; flex-shrink: 0; }
-.pl-val { color: #0f172a; font-weight: 600; text-align: right; font-family: 'JetBrains Mono', monospace; font-size: .72rem; }
+.pl-key { color: #5878a0; flex-shrink: 0; }
+.pl-val { color: #0e0e52; font-weight: 600; text-align: right; font-family: 'JetBrains Mono', monospace; font-size: .72rem; }
 
 /* Meta card */
 .meta-eyebrow {
@@ -631,7 +674,7 @@ export default {
   font-weight: 700;
   letter-spacing: .1em;
   text-transform: uppercase;
-  color: #64748b;
+  color: #5878a0;
   margin-bottom: .75rem;
   font-family: 'Outfit', sans-serif;
 }
@@ -642,12 +685,12 @@ export default {
   gap: .5rem;
   padding: .38rem 0;
   font-size: .8rem;
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid #eef5fb;
   font-family: 'Outfit', sans-serif;
 }
 .meta-line:last-child { border-bottom: none; }
-.meta-line span { color: #64748b; flex-shrink: 0; }
-.meta-line strong { color: #0f172a; font-weight: 600; text-align: right; word-break: break-all; font-family: 'JetBrains Mono', monospace; font-size: .75rem; }
+.meta-line span { color: #5878a0; flex-shrink: 0; }
+.meta-line strong { color: #0e0e52; font-weight: 600; text-align: right; word-break: break-all; font-family: 'JetBrains Mono', monospace; font-size: .75rem; }
 
 /* ── Main content ── */
 .post-main { min-width: 0; }
@@ -660,29 +703,41 @@ export default {
   font-family: 'Outfit', sans-serif;
 }
 .page-alert.danger { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
-.page-alert.info   { background: #f0fdfc; color: #0f766e; border: 1px solid #99f6e4; }
+.page-alert.info   { background: #eff6ff; color: #1e40af; border: 1px solid #93c5fd; }
 
-/* Post hero */
-.post-hero { margin-bottom: 1.25rem; }
+/* ── Post card (title + body, single white card) ── */
+.post-card {
+  background: #ffffff;
+  border-radius: 14px;
+  box-shadow: 0 1px 2px rgba(14,14,82,.04), 0 4px 16px rgba(14,14,82,.06);
+  border: 1px solid #c8dff0;
+  overflow: hidden;
+}
+
+/* Post hero — title area inside the card */
+.post-hero {
+  padding: 2rem 2.5rem 1.5rem;
+  border-bottom: 1px solid #eef5fb;
+}
 
 .post-title {
   font-family: 'Outfit', sans-serif;
   font-size: clamp(1.75rem, 4vw, 2.6rem);
   font-weight: 800;
   line-height: 1.15;
-  color: #0f172a;
-  margin: 0 0 .5rem;
+  color: #0e0e52;
+  margin: 0;
   letter-spacing: -.03em;
 }
 
 .comment-breadcrumbs {
   display: flex;
   gap: 1.5rem;
-  margin-top: .5rem;
+  margin-top: .75rem;
 }
 .comment-breadcrumbs a {
   font-size: .88rem;
-  color: #0d9488;
+  color: #449dd1;
   text-decoration: none;
   font-weight: 500;
   font-family: 'Outfit', sans-serif;
@@ -691,15 +746,11 @@ export default {
 
 /* ── Post body typography ── */
 .post-body {
-  background: #ffffff;
-  border-radius: 14px;
-  box-shadow: 0 1px 2px rgba(15,23,42,.04), 0 4px 16px rgba(15,23,42,.06);
-  border: 1px solid #e2e8f0;
-  padding: 2.5rem;
+  padding: 0.75rem 2.5rem 2.5rem;
   font-family: 'Lora', serif;
   font-size: 1.05rem;
   line-height: 1.82;
-  color: #1e293b;
+  color: #1a2e6e;
 }
 
 .post-body :deep(h1),
@@ -708,7 +759,7 @@ export default {
 .post-body :deep(h4) {
   font-family: 'Outfit', sans-serif;
   font-weight: 700;
-  color: #0f172a;
+  color: #0e0e52;
   margin-top: 1.6em;
   margin-bottom: .5em;
   line-height: 1.2;
@@ -721,39 +772,39 @@ export default {
 .post-body :deep(img) {
   max-width: 100%;
   border-radius: 12px;
-  margin: 1.75rem auto;
+  margin: 1rem auto 1.75rem;
   display: block;
-  box-shadow: 0 4px 24px rgba(15,23,42,.1);
+  box-shadow: 0 4px 24px rgba(21,5,120,.1);
   transition: transform .3s ease, box-shadow .3s ease;
 }
 .post-body :deep(img:hover) {
   transform: scale(1.01);
-  box-shadow: 0 8px 40px rgba(15,23,42,.15);
+  box-shadow: 0 8px 40px rgba(21,5,120,.15);
 }
 
-.post-body :deep(a) { color: #0d9488; text-underline-offset: 3px; }
+.post-body :deep(a) { color: #449dd1; text-underline-offset: 3px; }
 .post-body :deep(p) { margin-bottom: 1.25em; }
 
 .post-body :deep(blockquote) {
-  border-left: 4px solid #0d9488;
+  border-left: 4px solid #449dd1;
   padding: 1rem 1.5rem;
   margin: 1.75rem 0;
-  background: #f0fdfc;
+  background: #eff6ff;
   border-radius: 0 10px 10px 0;
   font-style: italic;
-  color: #475569;
+  color: #3b5c9e;
 }
 .post-body :deep(code) {
-  background: #f1f5f9;
+  background: #eef5fb;
   padding: .15em .4em;
   border-radius: 4px;
   font-size: .875em;
   font-family: 'JetBrains Mono', monospace;
-  color: #0f766e;
+  color: #1e40af;
 }
 .post-body :deep(pre) {
-  background: #0f172a;
-  color: #e2e8f0;
+  background: #0e0e52;
+  color: #bfdbfe;
   padding: 1.5rem;
   border-radius: 12px;
   overflow-x: auto;
@@ -764,7 +815,7 @@ export default {
 .post-body :deep(pre code) { background: none; color: inherit; padding: 0; }
 .post-body :deep(table) { width: 100%; border-collapse: collapse; margin: 1.5rem 0; font-size: .9rem; }
 .post-body :deep(th) {
-  background: #f8fafc;
+  background: #f4f9fd;
   padding: .6rem .9rem;
   text-align: left;
   font-family: 'Outfit', sans-serif;
@@ -772,15 +823,15 @@ export default {
   font-size: .72rem;
   letter-spacing: .07em;
   text-transform: uppercase;
-  color: #64748b;
-  border-bottom: 2px solid #e2e8f0;
+  color: #5878a0;
+  border-bottom: 2px solid #c8dff0;
 }
-.post-body :deep(td) { padding: .6rem .9rem; border-bottom: 1px solid #f1f5f9; }
+.post-body :deep(td) { padding: .6rem .9rem; border-bottom: 1px solid #eef5fb; }
 .post-body :deep(ul), .post-body :deep(ol) { padding-left: 1.5rem; margin-bottom: 1.25em; }
 .post-body :deep(li) { margin-bottom: .4em; }
 
 /* Divider */
-.post-divider { height: 1px; background: #e2e8f0; margin: 2.5rem 0; }
+.post-divider { height: 1px; background: #c8dff0; margin: 2.5rem 0; }
 
 /* Section heading */
 .section-hdg {
@@ -790,7 +841,7 @@ export default {
   font-family: 'Outfit', sans-serif;
   font-size: 1rem;
   font-weight: 700;
-  color: #0f172a;
+  color: #0e0e52;
   margin-bottom: 1rem;
   letter-spacing: -.01em;
 }
@@ -799,160 +850,182 @@ export default {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #0d9488, #059669);
+  background: linear-gradient(135deg, #449dd1, #192bc2);
   flex-shrink: 0;
 }
 
-/* ── Content Passport — dark certificate strip ── */
+/* ── Content Passport ── */
 .passport-bar {
   display: flex;
-  align-items: center;
-  gap: 0;
-  background: #0f172a;
-  border-radius: 10px;
-  padding: 0;
-  margin-bottom: 1rem;
-  font-family: 'Outfit', sans-serif;
+  align-items: stretch;
+  background: #ffffff;
+  border: 1.5px solid #c8dff0;
+  border-radius: 12px;
   overflow: hidden;
   flex-wrap: nowrap;
-  min-height: 44px;
+  min-height: 52px;
+  margin-bottom: 1rem;
+  font-family: 'Outfit', sans-serif;
+  box-shadow: 0 2px 16px rgba(14,14,82,.08);
+  position: relative;
+}
+/* gradient accent stripe along the top */
+.passport-bar::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2.5px;
+  background: linear-gradient(90deg, #150578, #192bc2, #449dd1, #78c0e0);
+  z-index: 1;
 }
 
-/* Left brand tab */
+/* Left: deep navy brand label */
 .pb-brand {
   display: flex;
   align-items: center;
-  gap: .4rem;
-  padding: .6rem 1rem;
-  background: linear-gradient(135deg, #0d9488, #059669);
+  gap: .5rem;
+  padding: 0 1.3rem;
+  background: linear-gradient(150deg, #0e0e52 0%, #192bc2 100%);
   flex-shrink: 0;
-  align-self: stretch;
 }
 .pb-icon {
-  width: 13px;
-  height: 13px;
-  color: #fff;
+  width: 15px;
+  height: 15px;
+  color: #78c0e0;
   flex-shrink: 0;
 }
 .pb-title {
-  font-weight: 700;
-  font-size: .65rem;
-  letter-spacing: .1em;
+  font-weight: 800;
+  font-size: .68rem;
+  letter-spacing: .13em;
   text-transform: uppercase;
-  color: #fff;
+  color: #ffffff;
   white-space: nowrap;
 }
 
-/* Fields row */
+/* Centre: data fields */
 .pb-fields {
   display: flex;
   align-items: center;
-  gap: 0;
-  padding: 0 .75rem;
+  justify-content: space-between;
+  padding: 0 2rem;
   flex: 1;
   overflow: hidden;
   flex-wrap: nowrap;
+  gap: 0;
+  border-left: 1px solid #c8dff0;
 }
 
 .pb-field {
   display: flex;
   align-items: center;
-  gap: .3rem;
+  gap: .32rem;
   flex-shrink: 0;
 }
 
 .pb-dot {
-  color: #334155;
-  font-size: .85rem;
-  margin: 0 .55rem;
+  color: #b8d4ef;
+  font-size: .78rem;
+  margin: 0 .65rem;
   flex-shrink: 0;
-  line-height: 1;
+  user-select: none;
 }
 
 .pb-key {
-  color: #64748b;
+  color: #5878a0;
   font-size: .67rem;
-  font-weight: 500;
+  font-weight: 800;
   white-space: nowrap;
   text-transform: uppercase;
-  letter-spacing: .05em;
+  letter-spacing: .09em;
 }
 
 .pb-val {
-  color: #e7e5e0;
-  font-weight: 600;
-  font-size: .78rem;
+  color: #0e0e52;
+  font-weight: 800;
+  font-size: .88rem;
   white-space: nowrap;
 }
 .pb-val.link {
-  color: #5eead4;
+  color: #192bc2;
   text-decoration: none;
   transition: color .15s;
 }
-.pb-val.link:hover { color: #99f6e4; }
+.pb-val.link:hover { color: #449dd1; }
 .pb-val.mono {
   font-family: 'JetBrains Mono', monospace;
-  font-size: .72rem;
-  font-weight: 400;
-  color: #94a3b8;
+  font-size: .78rem;
+  font-weight: 700;
+  color: #0e0e52;
 }
 
 /* Status chips */
 .pb-chip {
   display: inline-flex;
   align-items: center;
-  padding: .15em .5em;
+  padding: .17em .55em;
   border-radius: 4px;
-  font-size: .67rem;
-  font-weight: 700;
-  letter-spacing: .04em;
+  font-size: .66rem;
+  font-weight: 800;
+  letter-spacing: .05em;
   white-space: nowrap;
   font-family: 'Outfit', sans-serif;
 }
-.pb-chip.intact  { background: rgba(13,148,136,.3);  color: #5eead4; }
-.pb-chip.ai-yes  { background: rgba(29,78,216,.25);  color: #93c5fd; }
-.pb-chip.ai-no   { background: rgba(13,148,136,.3);  color: #5eead4; }
-.pb-chip.unknown { background: rgba(100,116,139,.2); color: #94a3b8; }
+.pb-chip.intact  { background: #192bc2; color: #ffffff; }
+.pb-chip.ai-yes  { background: #dbeafe; color: #1e40af; border: 1px solid #93c5fd; }
+.pb-chip.ai-no   { background: #192bc2; color: #ffffff; }
+.pb-chip.unknown { background: #eef5fb; color: #5878a0; border: 1px solid #c8dff0; }
 
-/* Right verified badge */
-.pb-verified {
+/* Right: share button */
+.pb-share {
   display: inline-flex;
   align-items: center;
-  gap: .4rem;
-  padding: 0 1rem;
-  font-size: .67rem;
-  font-weight: 700;
-  color: #5eead4;
-  letter-spacing: .06em;
+  gap: .5rem;
+  padding: 0 1.4rem;
+  font-size: .7rem;
+  font-weight: 800;
+  letter-spacing: .1em;
   text-transform: uppercase;
   white-space: nowrap;
   flex-shrink: 0;
-  border-left: 1px solid #334155;
-  align-self: stretch;
   font-family: 'Outfit', sans-serif;
-}
-
-.pb-pulse {
-  display: inline-block;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: #0d9488;
+  background: #f0f7ff;
+  color: #192bc2;
+  border: none;
+  border-left: 1.5px solid #c8dff0;
+  cursor: pointer;
   position: relative;
-  flex-shrink: 0;
+  overflow: hidden;
+  transition: color .25s, border-color .25s;
 }
-.pb-pulse::after {
+.pb-share::before {
   content: '';
   position: absolute;
-  inset: -3px;
-  border-radius: 50%;
-  background: rgba(13,148,136,.4);
-  animation: badge-ripple 1.8s ease-out infinite;
+  inset: 0;
+  background: linear-gradient(120deg, #dbeafe 0%, #93c5fd 50%, #78c0e0 100%);
+  transform: translateX(100%);
+  transition: transform .35s cubic-bezier(.4,0,.2,1);
+  z-index: 0;
 }
-@keyframes badge-ripple {
-  0%   { transform: scale(1); opacity: 1; }
-  100% { transform: scale(2.5); opacity: 0; }
+.pb-share:hover::before { transform: translateX(0); }
+.pb-share:hover {
+  color: #0e0e52;
+  border-left-color: #78c0e0;
 }
+.pb-share-inner {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: .5rem;
+}
+.pb-share .pb-icon {
+  color: #449dd1;
+  width: 14px;
+  height: 14px;
+  transition: color .25s;
+}
+.pb-share:hover .pb-icon { color: #192bc2; }
 
 /* ── Raw section ── */
 .raw-btn {
@@ -960,21 +1033,21 @@ export default {
   align-items: center;
   gap: .45rem;
   background: none;
-  border: 1px solid #e2e8f0;
+  border: 1px solid #c8dff0;
   border-radius: 8px;
   padding: .5rem 1.1rem;
   font-size: .8rem;
   font-family: 'Outfit', sans-serif;
   font-weight: 500;
-  color: #64748b;
+  color: #5878a0;
   cursor: pointer;
   transition: border-color .2s, color .2s, transform .15s, box-shadow .2s;
 }
 .raw-btn:hover {
-  border-color: #0d9488;
-  color: #0d9488;
+  border-color: #449dd1;
+  color: #449dd1;
   transform: translateY(-1px);
-  box-shadow: 0 3px 10px rgba(13,148,136,.15);
+  box-shadow: 0 3px 10px rgba(68,157,209,.18);
 }
 
 .raw-chevron {
@@ -1006,8 +1079,15 @@ export default {
   .skeleton-layout,
   .post-layout {
     grid-template-columns: 1fr;
-    padding: 1.25rem 1rem 3rem;
+    grid-template-rows: auto auto auto;
+    padding: .75rem .75rem 3rem;
+    gap: .85rem;
   }
+  .post-layout > .passport-bar { grid-column: 1 !important; grid-row: 1; }
+  .post-layout > .post-main    { grid-column: 1 !important; grid-row: 2; }
+  .post-layout > .post-sidebar { grid-column: 1 !important; grid-row: 3; }
+
+  /* Sidebar: two columns on tablet */
   .skeleton-sidebar,
   .post-sidebar {
     position: static;
@@ -1016,17 +1096,70 @@ export default {
     gap: .75rem;
   }
   .s-author { grid-column: 1 / -1; }
-  .post-body { padding: 1.5rem; }
-  .passport-card { padding: 1.25rem 1.5rem; }
+
+  /* Post card */
+  .post-hero { padding: 1.1rem 1.1rem .9rem; }
+  .post-body { padding: .6rem 1.1rem 1.4rem; }
+
+  /* ── Passport bar ── */
+  .passport-bar {
+    flex-wrap: wrap;
+    min-height: unset;
+    border-radius: 10px;
+    margin-bottom: 0;
+  }
+  .passport-bar::before { display: none; }
+
+  /* Row 1: brand + share */
+  .pb-brand {
+    order: 1;
+    flex: 1 1 auto;
+    padding: .55rem .9rem;
+    min-height: 40px;
+  }
+  .pb-share {
+    order: 2;
+    flex: 0 0 auto;
+    padding: 0 .9rem;
+    border-left: 1px solid rgba(255,255,255,.15);
+    min-height: 40px;
+  }
+
+  /* Row 2: scrollable fields with fade hint */
+  .pb-fields {
+    order: 3;
+    flex: 0 0 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding: .55rem .9rem;
+    border-top: 1px solid #c8dff0;
+    border-left: none;
+    background: #f4f9fd;
+    gap: .5rem;
+    mask-image: linear-gradient(to right, black 80%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to right, black 80%, transparent 100%);
+  }
+  .pb-fields::-webkit-scrollbar { display: none; }
+  .pb-dot { margin: 0 .3rem; }
 }
 
 @media (max-width: 600px) {
   .skeleton-sidebar,
   .post-sidebar { grid-template-columns: 1fr; }
-  .post-title { font-size: 1.75rem; }
-  .post-body { padding: 1.25rem; font-size: .97rem; }
-  .passport-card { padding: 1.1rem; }
-  .pp-label { width: auto; }
-  .passport-list li { flex-wrap: wrap; gap: .4rem; }
+
+  .post-layout { padding: .6rem .6rem 2.5rem; }
+
+  .post-title { font-size: 1.45rem; }
+  .post-hero  { padding: .9rem .9rem .75rem; }
+  .post-body  { padding: .5rem .9rem 1.25rem; font-size: .95rem; line-height: 1.75; }
+
+  /* Tighter passport bar */
+  .pb-brand { padding: .5rem .75rem; }
+  .pb-share { padding: 0 .75rem; }
+  .pb-fields { padding: .5rem .75rem; }
+  .pb-title  { font-size: .6rem; }
+  .pb-key    { font-size: .6rem; }
+  .pb-val    { font-size: .8rem; }
 }
 </style>

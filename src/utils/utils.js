@@ -13,22 +13,19 @@ export default {
     return this.textTimeAgo(t);
   },
 
-  textTimeAgo: function(t, ago = ' ago') {
-    if (t <= 1000) return "1 second"+ago;
-    if (t < 60 * 1000) return (t / 1000).toFixed(0) + " seconds"+ago;
-    if (t < 2 * 60 * 1000) return "1 minute"+ago;
-    if (t < 60 * 60 * 1000) return (t / 1000 / 60).toFixed(0) + " minutes"+ago;
-    if (t < 2 * 60 * 60 * 1000) return "1 hour"+ago;
-    if (t < 24 * 60 * 60 * 1000)
-      return (t / 1000 / 60 / 60).toFixed(0) + " hours"+ago;
+  textTimeAgo: function(t) {
+    if (t <= 1000) return "1s ago";
+    if (t < 60 * 1000) return (t / 1000).toFixed(0) + "s ago";
+    if (t < 2 * 60 * 1000) return "1m ago";
+    if (t < 60 * 60 * 1000) return (t / 1000 / 60).toFixed(0) + "m ago";
+    if (t < 2 * 60 * 60 * 1000) return "1h ago";
+    if (t < 24 * 60 * 60 * 1000) return (t / 1000 / 60 / 60).toFixed(0) + "h ago";
     if (t < 2 * 24 * 60 * 60 * 1000) return "yesterday";
-    if (t < 30 * 24 * 60 * 60 * 1000)
-      return (t / 1000 / 60 / 60 / 24).toFixed(0) + " days"+ago;
+    if (t < 30 * 24 * 60 * 60 * 1000) return (t / 1000 / 60 / 60 / 24).toFixed(0) + "d ago";
     if (t < 2 * 30 * 24 * 60 * 60 * 1000) return "last month";
-    if (t < 12 * 30 * 24 * 60 * 60 * 1000)
-      return (t / 1000 / 60 / 60 / 24 / 30).toFixed(0) + " months"+ago;
+    if (t < 12 * 30 * 24 * 60 * 60 * 1000) return (t / 1000 / 60 / 60 / 24 / 30).toFixed(0) + "mo ago";
     if (t < 2 * 12 * 30 * 24 * 60 * 60 * 1000) return "last year";
-    return (t / 1000 / 60 / 60 / 24 / 30 / 12).toFixed(0) + " years"+ago;
+    return (t / 1000 / 60 / 60 / 24 / 30 / 12).toFixed(0) + "y ago";
   },
 
   textTime: function(t) {

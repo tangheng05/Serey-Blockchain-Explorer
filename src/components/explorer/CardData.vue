@@ -1,34 +1,19 @@
 <template>
-  <div class="account">
-    <div class="title" v-if="title!=''">{{title}}</div>
-    <div class="roww line"></div>
-    <div class="data" v-for="(item,key,index) in data">
-      <div class="roww">
-        <div :class="{
-          key: true,
-          keyO: (typeof data === 'object' && typeCard==''),
-          keyA: Array.isArray(data)  && typeCard=='',
-          keyA2: typeCard=='witnesses'}">
-          {{key}}
-        </div
-        ><div :class="{
-          value: true,
-          valueO: (typeof data === 'object' && typeCard==''),
-          valueA: Array.isArray(data)  && typeCard=='',
-          valueA2: typeCard=='witnesses'}">        
-          <div v-if="typeof item === 'object'">
-            <div v-if="link==true && item.link">
-              <router-link :to="EXPLORER+item.link">{{item.text}}</router-link>
-            </div>
-            <div v-else>
-              <card-data :data="item"></card-data>
-            </div>
-          </div>
-          <div v-else>            
-            {{item}}            
-          </div>
-        </div>        
-      </div>
+  <div class="cd-wrap">
+    <div class="cd-title" v-if="title !== ''">{{ title }}</div>
+    <div class="cd-row" v-for="(item, key) in data" :key="key">
+      <span class="cd-key">{{ key }}</span>
+      <span class="cd-val">
+        <template v-if="typeof item === 'object'">
+          <template v-if="link && item.link">
+            <router-link :to="EXPLORER + item.link" class="cd-link">{{ item.text }}</router-link>
+          </template>
+          <template v-else>
+            <card-data :data="item" />
+          </template>
+        </template>
+        <template v-else>{{ item }}</template>
+      </span>
     </div>
   </div>
 </template>
@@ -39,120 +24,64 @@ import Config from '@/config.js'
 export default {
   name: 'card-data',
   props: {
-    data:{
-      type: [Object,Array],
-      required: true
-    },
-    title:{
-      type: String,
-      required: false,
-      default: ''
-    },
-    typeCard:{
-      type: String,
-      required: false,
-      default: ''
-    },
-    link:{
-      type: Boolean,
-      required: false,
-      default: false
-    }
+    data:     { type: [Object, Array], required: true },
+    title:    { type: String, required: false, default: '' },
+    typeCard: { type: String, required: false, default: '' },
+    link:     { type: Boolean, required: false, default: false },
   },
   data() {
-    return {
-      EXPLORER: Config.EXPLORER
-    }
-  }
+    return { EXPLORER: Config.EXPLORER }
+  },
 }
 </script>
 
 <style scoped>
-.account{
-  margin: 10px auto;
+.cd-wrap { width: 100%; }
+
+.cd-title {
+  font-family: 'Outfit', sans-serif;
+  font-size: .62rem;
+  font-weight: 800;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: #ffffff;
+  background: #192bc2;
+  padding: .45rem .75rem;
 }
 
-.title{
-  display: block;
-  width: 100%;
-  background-color: #72b4e8;
-  font-weight: bold;
-  color: white;
-  border: solid 1px #8a8a8a;
-  padding: 8px 10px;
+.cd-row {
+  display: flex;
+  align-items: baseline;
+  gap: .5rem;
+  padding: .38rem .75rem;
+  border-bottom: 1px solid #eef5fb;
+  font-family: 'Outfit', sans-serif;
 }
+.cd-row:last-child { border-bottom: none; }
 
-.line{
-  height: 1px;
-  line-height: 1px;
-  overflow: hidden;
-}
-
-.roww{
-  display: block;
-  width: 100%;
-  border: solid 1px #dcdcdc;
-  border-top-width: 0px;
-  background-color: white;
-  font-family: monospace;  
-}
-.key{
-  display: inline-block;
-  color: #a0a0a0;
-  vertical-align: top;
-  padding: 8px 10px;
-  
-  overflow-wrap: break-word;
-  word-wrap: break-word;
-  -ms-word-break: break-all;
+.cd-key {
+  flex-shrink: 0;
+  width: 11rem;
+  font-size: .72rem;
+  color: #5878a0;
+  font-weight: 500;
   word-break: break-all;
-  word-break: break-word;
-  -ms-hyphens: auto;
-  -moz-hyphens: auto;
-  -webkit-hyphens: auto;
-  hyphens: auto;
 }
 
-.value{
-  display: inline-block;
-  background-color: white;
-  padding: 8px 10px;
-  
-  overflow-wrap: break-word;
-  word-wrap: break-word;
-  -ms-word-break: break-all;
+.cd-val {
+  flex: 1;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .72rem;
+  color: #0e0e52;
+  font-weight: 500;
   word-break: break-all;
-  word-break: break-word;
-  -ms-hyphens: auto;
-  -moz-hyphens: auto;
-  -webkit-hyphens: auto;
-  hyphens: auto;
+  min-width: 0;
 }
 
-.keyO{
-  width: 8rem;  
+.cd-link {
+  color: #192bc2;
+  text-decoration: none;
+  transition: color .15s;
 }
-
-.keyA{
-  width: 2rem; 
-}
-
-.keyA2{
-  width: 3rem; 
-}
-
-.valueO{
-  width: calc(100% - 8rem);
-}
-
-.valueA{
-  width: calc(100% - 2rem);
-}
-
-.valueA2{
-  width: calc(100% - 3rem);
-}
-
-@media only screen and (min-width: 768px) {
-}
+.cd-link:hover { color: #449dd1; }
 </style>
