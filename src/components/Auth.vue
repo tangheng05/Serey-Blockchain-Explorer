@@ -1,7 +1,7 @@
 <template>
   <div class="container">
     <div novalidate>
-      <div class="form-group row">
+      <div class="form-group row mb-2">
         <label for="inputUsername" class="col-md-4 col-form-label">USERNAME</label>
         <div class="col-md-8">
           <input class="form-control" type="text" id="inputUsername"
@@ -9,7 +9,7 @@
              v-model="username" placeholder="Enter your username"/>
         </div>
       </div>
-      <div class="form-group row">
+      <div class="form-group row mb-3">
         <label for="inputPassword" class="col-md-4 col-form-label">PASSWORD</label>
         <div class="col-md-8">
           <input class="form-control" type="password" id="inputPassword"
@@ -18,14 +18,14 @@
         </div>
       </div>
       <div class="row">
-        <div class="form-group col-md-12 align-bottom" style="padding-top: 8px;">
-          <button @click="try_to_login" class="btn btn-primary me-2" :disabled="sending"><div v-if="sending" class="mini loader"></div>Login</button>
-          <button @click="close" class="btn btn-secondary" :disabled="aborting"><div v-if="aborting" class="mini loader"></div>Cancel</button>
+        <div class="form-group col-md-12" style="padding-top: 8px;">
+          <button @click="try_to_login" class="btn btn-primary me-2" :disabled="localSending">
+            <span v-if="localSending" class="spinner-border spinner-border-sm me-1"></span>Login
+          </button>
+          <button @click="close" class="btn btn-secondary">Cancel</button>
         </div>
       </div>
-      <div v-if="alertsStore.info" class="alert alert-info" role="alert">{{alertsStore.infoText}}</div>
-      <div v-if="alertsStore.success" class="alert alert-success" role="alert" v-html="alertsStore.successText"></div>
-      <div v-if="alertsStore.danger" class="alert alert-danger" role="alert">{{alertsStore.dangerText}}</div>
+      <div v-if="errorMsg" class="alert alert-danger mt-3" role="alert">{{ errorMsg }}</div>
     </div>
   </div>
 </template>
@@ -35,7 +35,6 @@ import { PrivateKey } from 'dsteem'
 import Config from '@/config.js'
 import Utils from '@/utils/utils.js'
 import { useRPCNode } from '@/composables/useRPCNode.js'
-import { useAlertsStore } from '@/stores/alerts.js'
 import { useAuthStore } from '@/stores/auth.js'
 import { useChainStore } from '@/stores/chain.js'
 
@@ -44,25 +43,25 @@ export default {
 
   setup() {
     const rpc = useRPCNode()
-    const alertsStore = useAlertsStore()
     const authStore = useAuthStore()
     const chainStore = useChainStore()
-    return { ...rpc, alertsStore, authStore, chainStore }
+    return { ...rpc, authStore, chainStore }
   },
 
   data() {
     return {
       username: '',
       password: '',
+      localSending: false,
+      errorMsg: '',
     }
   },
 
   methods: {
     async try_to_login() {
+      this.errorMsg = ''
+      this.localSending = true
       try {
-        this.sending = true
-        this.alertsStore.hideDanger()
-        this.alertsStore.hideInfo()
         const auth = await this.login(this.username, this.password)
         if (auth.logged) {
           this.authStore.$patch(auth)
@@ -71,13 +70,10 @@ export default {
       } catch (error) {
         console.log(error)
         const knownErrors = ['UserError', 'PasswordError', 'RPCError', 'RPCFailRounds', 'Abort']
-        if (knownErrors.includes(error.name)) {
-          this.alertsStore.showDanger(error.message)
-        } else {
-          this.alertsStore.showDanger('Password format mismatch')
-        }
-        this.sending = false
+        this.errorMsg = knownErrors.includes(error.name) ? error.message : 'Password format mismatch'
         this.$emit('error')
+      } finally {
+        this.localSending = false
       }
     },
 
@@ -92,8 +88,8 @@ export default {
         throw e
       }
 
-      const keysFromWIF = { owner: {}, active: {}, posting: {} }
-      for (const role in keysFromWIF) {
+      const keysFromWIF = {}
+      for (const role of ['owner', 'active', 'posting']) {
         const priv = PrivateKey.fromLogin(_username, _password, role)
         keysFromWIF[role] = { private: priv, public: priv.createPublic(Config.STEEM_ADDRESS_PREFIX).toString() }
       }
@@ -138,14 +134,13 @@ export default {
       auth.logged = true
       auth.user = _username
       auth.imgUrl = Utils.extractUrlProfileImage(json_metadata)
+      this.chainStore.max_fails = 1
+      this.chainStore.max_fail_rounds = 1000000
       console.log('Correct ' + typeOfPassword + ' key — Welcome @' + _username)
-      this.alertsStore.hideDanger()
       return auth
     },
 
     close() {
-      this.abortNodeConnection = true
-      if (this.sending) this.aborting = true
       this.$emit('close')
     },
   },

@@ -1,7 +1,9 @@
+import 'regenerator-runtime/runtime'
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
-import BootstrapVueNext from 'bootstrap-vue-next'
+import { createBootstrap, BModal } from 'bootstrap-vue-next'
 import 'bootstrap/dist/css/bootstrap.css'
+import 'bootstrap/dist/js/bootstrap.bundle.min.js'
 import 'bootstrap-vue-next/dist/bootstrap-vue-next.css'
 
 import { library } from '@fortawesome/fontawesome-svg-core'
@@ -39,7 +41,9 @@ const app = createApp(App)
 
 app.use(createPinia())
 app.use(router)
-app.use(BootstrapVueNext)
+app.use(createBootstrap())
+
+app.component('BModal', BModal)
 
 app.component('font-awesome-icon', FontAwesomeIcon)
 app.component('font-awesome-layers', FontAwesomeLayers)
