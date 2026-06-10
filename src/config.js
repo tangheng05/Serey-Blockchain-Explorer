@@ -1,6 +1,6 @@
 const config = {
   production: {
-    RPC_NODES: ['https://api.serey.io/'],
+    RPC_NODES: ['wss://api.serey.io'],
     EFTG_HARDFORK_0_1: false,
   },
   acceptance: {
