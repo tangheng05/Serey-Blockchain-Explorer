@@ -1,6 +1,6 @@
 const config = {
   production: {
-    RPC_NODES: ['wss://api.serey.io'],
+    RPC_NODES: [import.meta.env.VITE_API_BASE_URL || 'https://api.serey.io/'],
     EFTG_HARDFORK_0_1: false,
   },
   acceptance: {
@@ -8,7 +8,7 @@ const config = {
     EFTG_HARDFORK_0_1: false,
   },
   development: {
-    RPC_NODES: ['https://api.serey.io/'],
+    RPC_NODES: [import.meta.env.VITE_API_BASE_URL || 'https://api.serey.io/'],
     EFTG_HARDFORK_0_1: true,
   },
   testnet: {
