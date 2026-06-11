@@ -49,45 +49,56 @@
             <span class="pb-title">Content Ownership</span>
           </div>
 
-          <div class="pb-fields">
-            <div class="pb-field">
-              <span class="pb-key">Author</span>
-              <router-link :to="EXPLORER + '@' + post.author" class="pb-val link">@{{ post.author }}</router-link>
-            </div>
-            <div class="pb-dot">·</div>
-            <div class="pb-field">
-              <span class="pb-key">Published</span>
-              <span class="pb-val">{{ formatDate(post.created) }}</span>
-            </div>
-            <div class="pb-dot">·</div>
-            <div class="pb-field">
-              <span class="pb-key">Hash</span>
-              <span class="pb-chip intact">✓ Intact</span>
-            </div>
-            <div class="pb-dot">·</div>
-            <div class="pb-field">
-              <span class="pb-key">AI</span>
-              <span :class="['pb-chip', passportMeta.aiGenerated === true ? 'ai-yes' : passportMeta.aiGenerated === false ? 'ai-no' : 'unknown']">
-                {{ passportMeta.aiGenerated === true ? 'Yes' : passportMeta.aiGenerated === false ? 'No' : 'Unknown' }}
-              </span>
-            </div>
-            <div class="pb-dot">·</div>
-            <div class="pb-field">
-              <span class="pb-key">TX</span>
-              <span class="pb-val mono">#{{ post.id }}</span>
-            </div>
-          </div>
+          <span class="pb-arrow">›</span>
 
-          <button class="pb-share" @click="sharePost">
-            <span class="pb-share-inner">
-              <svg class="pb-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
-                <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
-              </svg>
-              Share
-            </span>
-          </button>
+          <div class="pb-info-card">
+            <div class="pb-fields">
+              <div class="pb-field">
+                <span class="pb-key">Author</span>
+                <router-link :to="EXPLORER + '@' + post.author" class="pb-val link">@{{ post.author }}</router-link>
+              </div>
+              <div class="pb-dot">·</div>
+              <div class="pb-field">
+                <span class="pb-key">Published</span>
+                <span class="pb-val">{{ formatDate(post.created) }}</span>
+              </div>
+              <div class="pb-dot">·</div>
+              <div class="pb-field pb-hash-tip" @mouseenter="showHashTooltip" @mouseleave="hideHashTooltip">
+                <span class="pb-key">Hash</span>
+                <span class="pb-chip intact">✓ Intact</span>
+              </div>
+              <div class="pb-dot">·</div>
+              <div class="pb-field">
+                <span class="pb-key">AI</span>
+                <span :class="['pb-chip', passportMeta.aiGenerated === true ? 'ai-yes' : passportMeta.aiGenerated === false ? 'ai-no' : 'unknown']">
+                  {{ passportMeta.aiGenerated === true ? 'Yes' : passportMeta.aiGenerated === false ? 'No' : 'Unknown' }}
+                </span>
+              </div>
+              <div class="pb-dot">·</div>
+              <div class="pb-field">
+                <span class="pb-key">TX</span>
+                <span class="pb-val mono">#{{ post.id }}</span>
+              </div>
+            </div>
+
+            <button class="pb-share" @click="sharePost">
+              <span class="pb-share-inner">
+                <svg class="pb-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+                  <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+                </svg>
+                Share
+              </span>
+            </button>
+          </div>
         </div>
+
+        <Teleport to="body">
+          <div v-if="hashTip.show" class="pb-tip-box" :style="{ top: hashTip.y + 'px', left: hashTip.x + 'px' }">
+            <strong>Content is Intact</strong>
+            <p>This post's content matches its original blockchain record exactly. Nothing has been edited or tampered with since it was published.</p>
+          </div>
+        </Teleport>
 
         <!-- ── SIDEBAR ── -->
         <aside class="post-sidebar">
@@ -243,6 +254,7 @@ export default {
       readProgress: 0,
       authorAvatar: '',
       EXPLORER: Config.EXPLORER,
+      hashTip: { show: false, x: 0, y: 0 },
     }
   },
 
@@ -280,6 +292,14 @@ export default {
   },
 
   methods: {
+    showHashTooltip(e) {
+      const rect = e.currentTarget.getBoundingClientRect()
+      this.hashTip = { show: true, x: rect.left + rect.width / 2, y: rect.bottom + 10 }
+    },
+    hideHashTooltip() {
+      this.hashTip.show = false
+    },
+
     sharePost() {
       if (navigator.share) {
         navigator.share({ title: this.post?.title || 'Serey Post', url: window.location.href })
@@ -854,38 +874,51 @@ export default {
   flex-shrink: 0;
 }
 
-@keyframes passport-glow {
-  0%, 100% { box-shadow: 0 0 6px 1px rgba(220,20,60,.25), 0 2px 16px rgba(14,14,82,.08); }
-  50%       { box-shadow: 0 0 14px 3px rgba(220,20,60,.45), 0 2px 16px rgba(14,14,82,.08); }
-}
 
 /* ── Content Passport ── */
 .passport-bar {
   display: flex;
   align-items: stretch;
-  border: 2.5px solid transparent;
-  background:
-    linear-gradient(#fff, #fff) padding-box,
-    linear-gradient(90deg, #8b0000, #dc143c, #ff4444, #ffaaaa) border-box;
-  border-radius: 12px;
-  overflow: hidden;
+  gap: .75rem;
   flex-wrap: nowrap;
-  min-height: 52px;
   margin-bottom: 1rem;
   font-family: 'Outfit', sans-serif;
-  animation: passport-glow 2.8s ease-in-out infinite;
-  position: relative;
 }
 
-/* Left: deep navy brand label */
+/* Left: deep navy brand label — standalone card, no red border */
 .pb-brand {
   display: flex;
   align-items: center;
   gap: .5rem;
   padding: 0 1.3rem;
   background: linear-gradient(150deg, #0e0e52 0%, #192bc2 100%);
+  border-radius: 12px;
   flex-shrink: 0;
 }
+
+/* Right: info card with red gradient border + glow */
+.pb-info-card {
+  display: flex;
+  align-items: stretch;
+  flex: 1;
+  border: 2.5px solid transparent;
+  background:
+    linear-gradient(#fff, #fff) padding-box,
+    linear-gradient(#dc143c, #dc143c) border-box;
+  border-radius: 12px;
+  min-height: 52px;
+  box-shadow: 0 2px 16px rgba(14,14,82,.08);
+}
+.pb-arrow {
+  display: flex;
+  align-items: center;
+  font-size: 1.4rem;
+  color: #192bc2;
+  font-weight: 700;
+  flex-shrink: 0;
+  user-select: none;
+}
+
 .pb-icon {
   width: 15px;
   height: 15px;
@@ -911,7 +944,6 @@ export default {
   overflow: hidden;
   flex-wrap: nowrap;
   gap: 0;
-  border-left: 1px solid #c8dff0;
 }
 
 .pb-field {
@@ -974,6 +1006,40 @@ export default {
 .pb-chip.ai-no   { background: #192bc2; color: #ffffff; }
 .pb-chip.unknown { background: #eef5fb; color: #5878a0; border: 1px solid #c8dff0; }
 
+/* Hash tooltip */
+.pb-hash-tip { cursor: default; }
+
+.pb-tip-box {
+  position: fixed;
+  transform: translateX(-50%);
+  width: 230px;
+  background: #0e0e52;
+  color: #e8eeff;
+  border-radius: 10px;
+  padding: .75rem 1rem;
+  font-size: .75rem;
+  line-height: 1.5;
+  z-index: 9999;
+  pointer-events: none;
+  box-shadow: 0 6px 24px rgba(14,14,82,.25);
+}
+.pb-tip-box::before {
+  content: '';
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-bottom-color: #0e0e52;
+}
+.pb-tip-box strong {
+  display: block;
+  color: #78c0e0;
+  font-size: .78rem;
+  margin-bottom: .35rem;
+}
+.pb-tip-box p { margin: 0; }
+
 /* Right: share button */
 .pb-share {
   display: inline-flex;
@@ -991,6 +1057,7 @@ export default {
   color: #192bc2;
   border: none;
   border-left: 1.5px solid #c8dff0;
+  border-radius: 0 9.5px 9.5px 0;
   cursor: pointer;
   position: relative;
   overflow: hidden;
@@ -1102,31 +1169,33 @@ export default {
   /* ── Passport bar ── */
   .passport-bar {
     flex-wrap: wrap;
-    min-height: unset;
-    border-radius: 10px;
     margin-bottom: 0;
+    gap: .5rem;
   }
-  .passport-bar::before { display: none; }
-
-  /* Row 1: brand + share */
   .pb-brand {
-    order: 1;
     flex: 1 1 auto;
     padding: .55rem .9rem;
     min-height: 40px;
+    border-radius: 10px;
   }
+  .pb-info-card {
+    flex: 0 0 100%;
+    flex-wrap: wrap;
+    min-height: unset;
+    border-radius: 10px;
+  }
+
+  /* Row 1: share */
   .pb-share {
-    order: 2;
     flex: 0 0 auto;
     padding: 0 .9rem;
-    border-left: 1px solid rgba(255,255,255,.15);
     min-height: 40px;
   }
 
   /* Row 2: scrollable fields with fade hint */
   .pb-fields {
-    order: 3;
-    flex: 0 0 100%;
+    flex: 1 1 auto;
+    order: -1;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
