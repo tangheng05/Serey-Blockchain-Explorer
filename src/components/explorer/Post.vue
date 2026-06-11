@@ -854,29 +854,27 @@ export default {
   flex-shrink: 0;
 }
 
+@keyframes passport-glow {
+  0%, 100% { box-shadow: 0 0 6px 1px rgba(220,20,60,.25), 0 2px 16px rgba(14,14,82,.08); }
+  50%       { box-shadow: 0 0 14px 3px rgba(220,20,60,.45), 0 2px 16px rgba(14,14,82,.08); }
+}
+
 /* ── Content Passport ── */
 .passport-bar {
   display: flex;
   align-items: stretch;
-  background: #ffffff;
-  border: 1.5px solid #c8dff0;
+  border: 2.5px solid transparent;
+  background:
+    linear-gradient(#fff, #fff) padding-box,
+    linear-gradient(90deg, #8b0000, #dc143c, #ff4444, #ffaaaa) border-box;
   border-radius: 12px;
   overflow: hidden;
   flex-wrap: nowrap;
   min-height: 52px;
   margin-bottom: 1rem;
   font-family: 'Outfit', sans-serif;
-  box-shadow: 0 2px 16px rgba(14,14,82,.08);
+  animation: passport-glow 2.8s ease-in-out infinite;
   position: relative;
-}
-/* gradient accent stripe along the top */
-.passport-bar::before {
-  content: '';
-  position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 2.5px;
-  background: linear-gradient(90deg, #150578, #192bc2, #449dd1, #78c0e0);
-  z-index: 1;
 }
 
 /* Left: deep navy brand label */
