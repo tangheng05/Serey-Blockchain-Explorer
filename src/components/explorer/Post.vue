@@ -182,7 +182,7 @@
           >
             <h3 class="section-hdg">
               <span class="accent-dot"></span>
-              {{ postDetail ? postDetail.voter_count : (post.active_votes || []).length }} Votes
+              {{ (post.active_votes || []).length }} Votes
             </h3>
             <votes :data="post.active_votes || []" :dataApi="postDetail ? postDetail.voters : []" :payout="payout" />
           </section>
