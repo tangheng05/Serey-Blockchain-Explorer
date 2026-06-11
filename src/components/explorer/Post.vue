@@ -462,6 +462,7 @@ export default {
   background: #eef5fb;
   min-height: 100vh;
   font-family: 'Outfit', sans-serif;
+  overflow-x: hidden;
 }
 
 /* ── Skeleton loading ── */
@@ -771,6 +772,9 @@ export default {
   font-size: 1.05rem;
   line-height: 1.82;
   color: #1a2e6e;
+  overflow-wrap: break-word;
+  word-break: break-word;
+  min-width: 0;
 }
 
 .post-body :deep(h1),
@@ -1168,47 +1172,56 @@ export default {
 
   /* ── Passport bar ── */
   .passport-bar {
-    flex-wrap: wrap;
+    flex-direction: column;
     margin-bottom: 0;
     gap: .5rem;
+    width: 100%;
+    min-width: 0;
   }
+  .pb-arrow { display: none; }
   .pb-brand {
-    flex: 1 1 auto;
+    flex: unset;
     padding: .55rem .9rem;
     min-height: 40px;
     border-radius: 10px;
   }
   .pb-info-card {
-    flex: 0 0 100%;
-    flex-wrap: wrap;
+    flex-direction: column;
     min-height: unset;
     border-radius: 10px;
+    width: 100%;
+    min-width: 0;
+    overflow: hidden;
   }
 
-  /* Row 1: share */
-  .pb-share {
-    flex: 0 0 auto;
-    padding: 0 .9rem;
-    min-height: 40px;
-  }
-
-  /* Row 2: scrollable fields with fade hint */
+  /* Scrollable fields row */
   .pb-fields {
     flex: 1 1 auto;
-    order: -1;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
     padding: .55rem .9rem;
-    border-top: 1px solid #c8dff0;
     border-left: none;
     background: #f4f9fd;
     gap: .5rem;
     mask-image: linear-gradient(to right, black 80%, transparent 100%);
     -webkit-mask-image: linear-gradient(to right, black 80%, transparent 100%);
+    justify-content: flex-start;
   }
   .pb-fields::-webkit-scrollbar { display: none; }
   .pb-dot { margin: 0 .3rem; }
+
+  /* Share button at bottom of info card */
+  .pb-share {
+    flex: unset;
+    width: 100%;
+    padding: .5rem .9rem;
+    min-height: 40px;
+    border-left: none;
+    border-top: 1.5px solid #c8dff0;
+    border-radius: 0 0 9.5px 9.5px;
+    justify-content: center;
+  }
 }
 
 @media (max-width: 600px) {
@@ -1222,8 +1235,8 @@ export default {
   .post-body  { padding: .5rem .9rem 1.25rem; font-size: .95rem; line-height: 1.75; }
 
   /* Tighter passport bar */
-  .pb-brand { padding: .5rem .75rem; }
-  .pb-share { padding: 0 .75rem; }
+  .pb-brand  { padding: .5rem .75rem; }
+  .pb-share  { padding: .45rem .75rem; }
   .pb-fields { padding: .5rem .75rem; }
   .pb-title  { font-size: .6rem; }
   .pb-key    { font-size: .6rem; }
