@@ -33,6 +33,7 @@
             <div v-else class="stat-figure muted">—</div>
           </div>
 
+          <!-- Inflation card hidden
           <div class="s-card"
             v-motion
             :initial="{ opacity: 0, x: -24 }"
@@ -47,6 +48,7 @@
               <span class="stat-value">{{ chain.new_steem_per_day }}</span>
             </div>
           </div>
+          -->
 
           <div class="s-card"
             v-motion
@@ -115,6 +117,24 @@
         <div v-if="alertsStore.info"    class="page-alert info">{{ alertsStore.infoText }}</div>
         <div v-if="alertsStore.success" class="page-alert success" v-html="alertsStore.successText"></div>
         <div v-if="alertsStore.danger"  class="page-alert danger">{{ alertsStore.dangerText }}</div>
+
+        <!-- ── Homepage Search ── -->
+        <form class="hs-form" @submit.prevent="handleSearch"
+          v-motion
+          :initial="{ opacity: 0, y: -10 }"
+          :enter="{ opacity: 1, y: 0, transition: { type: 'spring', stiffness: 300, damping: 26, delay: 20 } }"
+        >
+          <svg class="hs-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input
+            v-model="hsQuery"
+            class="hs-input"
+            type="text"
+            placeholder="Search users or paste a link to verify ownership"
+            autocomplete="off"
+            spellcheck="false"
+          />
+          <button class="hs-btn" type="submit">Search</button>
+        </form>
 
         <h2 class="section-hdg"
           v-motion
@@ -220,6 +240,7 @@ export default {
       last_block_num: 0,
       wait_more_time: false,
       EXPLORER: Config.EXPLORER,
+      hsQuery: '',
     }
   },
 
@@ -258,6 +279,31 @@ export default {
   },
 
   methods: {
+    handleSearch() {
+      const raw = this.hsQuery.trim()
+      if (!raw) return
+      this.hsQuery = ''
+
+      // Serey blog URL: /authors/{account}/{permlink}
+      const urlMatch = raw.match(/\/authors\/([^/]+)\/([^/?#]+)/)
+      if (urlMatch) {
+        this.$router.push(`/explorer/@${urlMatch[1]}/${urlMatch[2]}`)
+        return
+      }
+
+      // Generic serey.io/@account/permlink URL
+      const atUrlMatch = raw.match(/@([^/]+)\/([^/?#]+)/)
+      if (atUrlMatch) {
+        this.$router.push(`/explorer/@${atUrlMatch[1]}/${atUrlMatch[2]}`)
+        return
+      }
+
+      const s = raw.replace(/^@/, '')
+      if (s.length === 40)       this.$router.push(`/explorer/tx/${s}`)
+      else if (/^\d+$/.test(s)) this.$router.push(`/explorer/b/${s}`)
+      else                       this.$router.push(`/explorer/@${s}`)
+    },
+
     async getWitnessSchedule() {
       const witness_schedule = await this.steem_database_call('get_witness_schedule')
 
@@ -489,6 +535,54 @@ export default {
   background: #449dd1;
   flex-shrink: 0;
 }
+
+/* ── Homepage Search ── */
+.hs-form {
+  display: flex;
+  align-items: center;
+  background: #ffffff;
+  border: 1.5px solid #a8c8e8;
+  border-radius: 10px;
+  padding: .45rem .6rem .45rem .9rem;
+  gap: .5rem;
+  margin-bottom: 1.25rem;
+  transition: border-color .2s, box-shadow .2s;
+}
+.hs-form:focus-within {
+  border-color: #449dd1;
+  box-shadow: 0 0 0 3px rgba(68,157,209,.12);
+}
+.hs-icon {
+  width: 15px;
+  height: 15px;
+  color: #5878a0;
+  flex-shrink: 0;
+}
+.hs-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-size: .875rem;
+  color: #0e0e52;
+  min-width: 0;
+  padding: .35rem 0;
+}
+.hs-input::placeholder { color: #8aa4c0; }
+.hs-btn {
+  background: #0e0e52;
+  color: #fff;
+  border: none;
+  border-radius: 7px;
+  font-size: .8rem;
+  font-weight: 600;
+  padding: .42rem 1rem;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background .15s;
+  flex-shrink: 0;
+}
+.hs-btn:hover { background: #192bc2; }
 
 /* ── Block list ── */
 .home-main { min-width: 0; }
