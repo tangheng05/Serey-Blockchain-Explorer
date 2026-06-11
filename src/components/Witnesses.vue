@@ -126,11 +126,10 @@ export default {
       const names = witnessesByVote.map(w => w.owner)
       const accounts = await this.steem_database_call('get_accounts', [names])
 
-      this.witnesses = witnessesByVote.map((wit, i) => {
+      const mapped = witnessesByVote.map((wit, i) => {
         wit.vote = { approve: false, shares: '0.000000 VESTS' }
         wit.newVote = { approve: false, shares: '0.000000 VESTS' }
         wit.votes_sp = this.witnessVotes2sp(wit.votes)
-        wit.position = i + 1
         wit.enabled = wit.signing_key !== Config.STEEM_ADDRESS_PREFIX + '1111111111111111111111111111111114T1Anm'
         let metadata = {}
         try { metadata = JSON.parse(accounts[i].json_metadata) } catch (e) { /* */ }
@@ -138,6 +137,14 @@ export default {
         wit.steem_power = this.vests2sp(accounts[i].vesting_shares)
         return wit
       })
+
+      // Active witnesses first (by approval desc), then inactive (by approval desc)
+      mapped.sort((a, b) => {
+        if (a.enabled !== b.enabled) return a.enabled ? -1 : 1
+        return parseInt(b.votes) - parseInt(a.votes)
+      })
+      mapped.forEach((wit, i) => { wit.position = i + 1 })
+      this.witnesses = mapped
       this.witLoaded = true
       if (this.authStore.logged) await this.loadVotesFromAccount()
     },
