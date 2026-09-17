@@ -65,9 +65,22 @@
               <div class="pb-dot">·</div>
               <div class="pb-field pb-hash-tip" @mouseenter="showHashTooltip" @mouseleave="hideHashTooltip">
                 <span class="pb-key">Hash</span>
-                <span class="pb-chip intact">✓ Intact</span>
+                <button
+                  v-if="hashState.kind === 'fingerprint'"
+                  class="pb-hash-val"
+                  :class="{ copied: hashCopied }"
+                  @click="copyHash"
+                >{{ hashCopied ? 'Copied' : shortHash }}</button>
+                <span v-else-if="hashState.kind === 'legacy'" class="pb-chip intact">✓ On chain</span>
+                <span v-else-if="hashState.kind === 'unavailable'" class="pb-chip unknown">Not served</span>
+                <span v-else class="pb-chip unknown">Not recorded</span>
               </div>
               <div class="pb-dot">·</div>
+              <div v-if="permanence.has" class="pb-field pb-perm-tip" @mouseenter="showPermTooltip" @mouseleave="hidePermTooltip">
+                <span class="pb-key">Storage</span>
+                <span class="pb-chip permanent">∞ Permanent</span>
+              </div>
+              <div v-if="permanence.has" class="pb-dot">·</div>
               <div class="pb-field">
                 <span class="pb-key">AI</span>
                 <span :class="['pb-chip', passportMeta.aiGenerated === true ? 'ai-yes' : passportMeta.aiGenerated === false ? 'ai-no' : 'unknown']">
@@ -95,8 +108,37 @@
 
         <Teleport to="body">
           <div v-if="hashTip.show" class="pb-tip-box" :style="{ top: hashTip.y + 'px', left: hashTip.x + 'px' }">
-            <strong>Content is Intact</strong>
-            <p>This post's content matches its original blockchain record exactly. Nothing has been edited or tampered with since it was published.</p>
+            <template v-if="hashState.kind === 'fingerprint'">
+              <strong>A fingerprint, not the text</strong>
+              <p>
+                The blockchain carries this value in place of the post's words. Anyone
+                holding the text can check it against this and see it has not been altered;
+                on its own it reveals nothing. Click to copy it in full.
+              </p>
+            </template>
+            <template v-else-if="hashState.kind === 'legacy'">
+              <strong>Text is on the chain</strong>
+              <p>This post was published before Serey moved to storing a fingerprint, so its words are written into the block itself and cannot be removed.</p>
+            </template>
+            <template v-else-if="hashState.kind === 'unavailable'">
+              <strong>This node does not serve content</strong>
+              <p>
+                The RPC node answered with the post's structure but none of its text or
+                metadata, so the chain record cannot be read here. What is shown below comes
+                from Serey's own storage.
+              </p>
+            </template>
+            <template v-else>
+              <strong>Nothing recorded</strong>
+              <p>This post's block carries neither its text nor a fingerprint of it, so the chain has nothing to check the words against.</p>
+            </template>
+          </div>
+        </Teleport>
+
+        <Teleport to="body">
+          <div v-if="permTip.show" class="pb-tip-box" :style="{ top: permTip.y + 'px', left: permTip.x + 'px' }">
+            <strong>Stored permanently</strong>
+            <p>This post's text and files were copied to Arweave, a public network with no delete. Not even Serey can remove them. See the copies below.</p>
           </div>
         </Teleport>
 
@@ -159,7 +201,7 @@
             :enter="{ opacity: 1, y: 0, transition: { type: 'spring', stiffness: 260, damping: 24, delay: 100 } }"
           >
             <header v-if="post.depth !== 0 || post.title" class="post-hero">
-              <h1 v-if="post.depth === 0" class="post-title">{{ post.title }}</h1>
+              <h1 v-if="post.depth === 0 && displayTitle" class="post-title">{{ displayTitle }}</h1>
               <template v-else>
                 <h1 class="post-title">Comment</h1>
                 <div class="comment-breadcrumbs">
@@ -168,7 +210,25 @@
                 </div>
               </template>
             </header>
-            <article class="post-body" v-html="postDetail ? postDetail.description : post.body"></article>
+
+            <div v-if="postVideos.length" class="post-media">
+              <video
+                v-for="(src, i) in postVideos"
+                :key="src"
+                class="post-video"
+                :src="src"
+                :poster="i === 0 ? videoPoster : undefined"
+                controls
+                playsinline
+                preload="metadata"
+              ></video>
+            </div>
+
+            <article v-if="chainBody" class="post-body" v-html="chainBody"></article>
+
+            <section v-if="serveyCopy" class="db-copy">
+              <article class="post-body" v-html="serveyCopy"></article>
+            </section>
           </div>
 
           <div class="post-divider"></div>
@@ -197,6 +257,61 @@
             >
               <h3 class="section-hdg"><span class="accent-dot"></span> Beneficiaries</h3>
               <beneficiaries :data="post.beneficiaries" :payout="payout" />
+            </section>
+          </template>
+
+          <template v-if="permanence.has">
+            <div class="post-divider"></div>
+            <section
+              v-motion
+              :initial="{ opacity: 0, y: 18 }"
+              :visible-once="{ opacity: 1, y: 0, transition: { type: 'spring', stiffness: 240, damping: 26 } }"
+            >
+              <h3 class="section-hdg"><span class="accent-dot"></span> Permanent copies</h3>
+              <p class="perm-lede">
+                Copied to Arweave when this post was published. Anyone can fetch them and check
+                the hashes below; nobody can remove them.
+              </p>
+
+              <div class="perm-list">
+                <div v-if="permanence.text" class="perm-row">
+                  <div class="perm-what">
+                    <span class="perm-kind">Text</span>
+                    <span class="perm-name">title and body</span>
+                  </div>
+                  <div class="perm-hashes">
+                    <div v-if="permanence.text.sha256" class="perm-hash">
+                      <span class="perm-hash-key">SHA-256</span>
+                      <code>{{ permanence.text.sha256 }}</code>
+                    </div>
+                    <div v-if="chainRecord.commitment" class="perm-hash">
+                      <span class="perm-hash-key">On chain</span>
+                      <code>{{ chainRecord.commitment }}</code>
+                    </div>
+                  </div>
+                  <a class="perm-open" :href="arweaveUrl(permanence.text.ar)" target="_blank" rel="noopener noreferrer">Open ↗</a>
+                </div>
+
+                <div v-for="file in permanence.media" :key="file.ar" class="perm-row">
+                  <div class="perm-what">
+                    <span class="perm-kind">File</span>
+                    <a v-if="file.url" class="perm-name link" :href="file.url" target="_blank" rel="noopener noreferrer">{{ fileName(file.url) }}</a>
+                    <span v-else class="perm-name">file</span>
+                  </div>
+                  <div class="perm-hashes">
+                    <div v-if="file.s5" class="perm-hash">
+                      <span class="perm-hash-key">S5 CID</span>
+                      <code>{{ file.s5 }}</code>
+                    </div>
+                  </div>
+                  <a class="perm-open" :href="arweaveUrl(file.ar)" target="_blank" rel="noopener noreferrer">Open ↗</a>
+                </div>
+              </div>
+
+              <p class="perm-note">
+                A copy made in the last hour may not answer yet while it is written to the
+                chain — the link starts working on its own.
+              </p>
             </section>
           </template>
 
@@ -255,6 +370,9 @@ export default {
       authorAvatar: '',
       EXPLORER: Config.EXPLORER,
       hashTip: { show: false, x: 0, y: 0 },
+      hashCopied: false,
+      fromOperation: false,
+      permTip: { show: false, x: 0, y: 0 },
     }
   },
 
@@ -262,6 +380,127 @@ export default {
     authorAvatarStyle() {
       const url = this.authorAvatar || `https://steemitimages.com/u/${this.post.author}/avatar`
       return { backgroundImage: `url(${url})` }
+    },
+
+    /*
+    | The permanent copies, straight off the post's own metadata.
+    |
+    | A Forever post carries an `arweave` block written when every copy was
+    | confirmed: the text's sha256 (the bytes the chain's commitment was
+    | built over) and each file's S5 CID (its BLAKE3 content address), each
+    | with the id of its Arweave copy. A post without the block is an
+    | ordinary post and this section does not appear.
+    */
+    /*
+    | What the chain actually carries for this post.
+    |
+    | Since the hash-only change a post's body on chain is a marker plus a
+    | keyed fingerprint of the text, not the text: `serey\nc:<commitment>`,
+    | with the same value in json_metadata. Older posts still carry their
+    | prose and are left alone.
+    */
+    chainRecord() {
+      let meta = {}
+      try { meta = JSON.parse(this.post.json_metadata || '{}') } catch (e) { /* */ }
+      const commitment = meta.content_commitment || meta.content_sha256 || null
+      const hashOnly = Boolean(commitment) || meta.format === 'hash'
+      return { hashOnly, commitment, bcVersion: meta.bc_version || null }
+    },
+
+    /*
+    | Which of the three the chain actually holds for this post: a keyed
+    | fingerprint of the text, the text itself (posts from before the
+    | change), or nothing at all. The bar used to claim "Intact" for all
+    | three without checking anything.
+    */
+    hashState() {
+      if (this.chainRecord.commitment) return { kind: 'fingerprint', value: this.chainRecord.commitment }
+      if ((this.post.body || '').trim()) return { kind: 'legacy', value: null }
+      // Title, body and metadata all empty means the node answered without
+      // any content, not that the post was published without any: every real
+      // post carries metadata. Saying "not recorded" there would blame the
+      // chain for what this node simply does not serve.
+      if (!this.contentServed) return { kind: 'unavailable', value: null }
+      return { kind: 'none', value: null }
+    },
+
+    // Does this node serve post content at all?
+    contentServed() {
+      const p = this.post || {}
+      return Boolean((p.title || '').trim() || (p.body || '').trim() || (p.json_metadata || '').trim())
+    },
+
+    /*
+    | The chain's title for a hash-only post is the marker word, not a
+    | title -- printing it as the headline reads as a post called "serey".
+    */
+    displayTitle() {
+      const title = (this.post.title || '').trim()
+      if (this.chainRecord.hashOnly && /^serey$/i.test(title)) {
+        return (this.postDetail && this.postDetail.title) || ''
+      }
+      return title
+    },
+
+    shortHash() {
+      const v = this.hashState.value || ''
+      return v.length > 18 ? `${v.slice(0, 10)}…${v.slice(-6)}` : v
+    },
+
+    /*
+    | What the chain itself carries, which is what an explorer is for.
+    |
+    | Empty for a hash-only post: its body is the marker plus a fingerprint,
+    | not text, and printing that raw reads as a broken post. The block below
+    | explains it instead.
+    */
+    chainBody() {
+      const body = this.post.body || ''
+      if (this.chainRecord.hashOnly && /^serey\s*\n?\s*c:/i.test(body.trim())) return ''
+      return body
+    },
+
+    /*
+    | Serey's own copy of the text, from the API. Shown under the chain
+    | record and labelled as what it is: a database row, not a chain record.
+    | For a hash-only post it is the only place the words exist, and it is
+    | the copy a takedown destroys.
+    */
+    /*
+    | A video post carries its file in the API's own `videos` field, never in
+    | the post HTML: the description holds only the words. Rendering the body
+    | alone left such a post looking like it had nothing in it but its title.
+    */
+    postVideos() {
+      const list = (this.postDetail && this.postDetail.videos) || []
+      return list.filter(url => typeof url === 'string' && url.trim())
+    },
+
+    // Serey generates a still for an uploaded video and files it under the
+    // post's images; it is the right poster for the first player.
+    videoPoster() {
+      const list = (this.postDetail && this.postDetail.image_url) || []
+      return list.find(url => typeof url === 'string' && url.trim()) || ''
+    },
+
+    serveyCopy() {
+      const fromApi = this.postDetail && this.postDetail.description
+      if (!fromApi) return ''
+      // Shown whenever the chain is not already printing the same prose --
+      // a hash-only post, or one whose chain record carries no body at all.
+      if (this.chainBody) return ''
+      return fromApi
+    },
+
+    permanence() {
+      let meta = {}
+      try { meta = JSON.parse(this.post.json_metadata || '{}') } catch (e) { /* */ }
+      const block = meta && meta.arweave
+      if (!block) return { has: false, text: null, media: [] }
+
+      const text = block.post && block.post.ar ? block.post : null
+      const media = (block.media || []).filter((m) => m && m.ar)
+      return { has: Boolean(text || media.length), text, media }
     },
 
     passportMeta() {
@@ -292,6 +531,65 @@ export default {
   },
 
   methods: {
+    /*
+    | The post's own comment operation, read back from the author's account
+    | history and merged onto the record.
+    |
+    | An edit broadcasts another comment op for the same permlink, so the
+    | newest one wins -- history comes back oldest first, and the last match
+    | is what the chain settled on. `fromOperation` marks where it came from;
+    | it is still chain data, just a different call.
+    */
+    async fillFromOperation(author, permlink) {
+      let history
+      try {
+        history = await this.steem_database_call('get_account_history', [author, -1, 100])
+      } catch (e) {
+        return
+      }
+      if (!Array.isArray(history)) return
+
+      let op = null
+      for (const entry of history) {
+        const o = entry && entry[1] && entry[1].op
+        if (!o || o[0] !== 'comment') continue
+        if (o[1].author === author && o[1].permlink === permlink) op = o[1]
+      }
+      if (!op) return
+
+      this.post = {
+        ...this.post,
+        title: op.title || this.post.title,
+        body: op.body || this.post.body,
+        json_metadata: op.json_metadata || this.post.json_metadata,
+      }
+      this.fromOperation = true
+    },
+
+    async copyHash() {
+      const value = this.hashState.value
+      if (!value) return
+      try {
+        await navigator.clipboard.writeText(value)
+      } catch (e) {
+        return
+      }
+      this.hashCopied = true
+      setTimeout(() => { this.hashCopied = false }, 1400)
+    },
+    arweaveUrl(id) {
+      return `https://arweave.net/${id}`
+    },
+    fileName(url) {
+      try { return decodeURIComponent(String(url).split('/').pop()) } catch (e) { return url }
+    },
+    showPermTooltip(e) {
+      const rect = e.currentTarget.getBoundingClientRect()
+      this.permTip = { show: true, x: rect.left + rect.width / 2, y: rect.bottom + 10 }
+    },
+    hidePermTooltip() {
+      this.permTip.show = false
+    },
     showHashTooltip(e) {
       const rect = e.currentTarget.getBoundingClientRect()
       this.hashTip = { show: true, x: rect.left + rect.width / 2, y: rect.bottom + 10 }
@@ -364,6 +662,12 @@ export default {
 
       // Avatar fetched fire-and-forget — updates reactively when done
       this.fetchAuthorAvatar(author)
+
+      // This node's content index answers with empty title, body and
+      // metadata for every post, while the block that carries them is
+      // intact. The operation itself is the chain record, so read that
+      // instead rather than reporting nothing.
+      if (!this.contentServed) await this.fillFromOperation(author, permlink)
 
       const no_keys = ['body', 'json_metadata', 'beneficiaries', 'active_votes', 'replies', 'body_length', 'reblogged_by']
       const pst = {}
@@ -1009,6 +1313,140 @@ export default {
 .pb-chip.ai-yes  { background: #dbeafe; color: #1e40af; border: 1px solid #93c5fd; }
 .pb-chip.ai-no   { background: #192bc2; color: #ffffff; }
 .pb-chip.unknown { background: #eef5fb; color: #5878a0; border: 1px solid #c8dff0; }
+.pb-chip.permanent { background: #6d28d9; color: #ffffff; }
+
+.pb-hash-val {
+  padding: .17em .55em;
+  border: 1px solid #c8dff0;
+  border-radius: 4px;
+  background: #eef5fb;
+  color: #2c4a6b;
+  font-family: 'Roboto Mono', ui-monospace, monospace;
+  font-size: .68rem;
+  font-weight: 600;
+  letter-spacing: .01em;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background .15s ease, color .15s ease, border-color .15s ease;
+}
+.pb-hash-val:hover { background: #dbe9f6; }
+.pb-hash-val.copied {
+  background: #192bc2;
+  border-color: #192bc2;
+  color: #ffffff;
+}
+
+/* Video posts */
+.post-media {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 1.35rem;
+}
+
+.post-video {
+  display: block;
+  width: 100%;
+  max-height: 70vh;
+  border-radius: 10px;
+  background: #0b1220;
+}
+
+/* What the chain stores */
+.db-copy {
+  padding-top: 1.5rem;
+  border-top: 1px solid #eef2f7;
+}
+
+/* Permanent copies */
+.pb-perm-tip { cursor: default; }
+
+.perm-lede {
+  margin: 0 0 .9rem;
+  color: #5878a0;
+  font-size: .86rem;
+  line-height: 1.5;
+}
+
+.perm-list {
+  display: flex;
+  flex-direction: column;
+  gap: .5rem;
+}
+
+.perm-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding: .7rem .9rem;
+  border: 1px solid #e6eef7;
+  border-left: 3px solid #6d28d9;
+  border-radius: 8px;
+  background: #fbfcfe;
+}
+
+.perm-what {
+  display: flex;
+  align-items: baseline;
+  gap: .5rem;
+  min-width: 11rem;
+}
+
+.perm-kind {
+  font-family: 'Outfit', sans-serif;
+  font-size: .66rem;
+  font-weight: 800;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  color: #6d28d9;
+}
+
+.perm-name { color: #2c4a6b; font-size: .9rem; }
+.perm-name.link { color: #192bc2; text-decoration: none; }
+.perm-name.link:hover { text-decoration: underline; }
+
+.perm-hashes { flex: 1 1 18rem; min-width: 0; }
+
+.perm-hash {
+  display: flex;
+  align-items: baseline;
+  gap: .5rem;
+  min-width: 0;
+}
+
+.perm-hash-key {
+  font-size: .62rem;
+  font-weight: 800;
+  letter-spacing: .05em;
+  color: #8aa4bf;
+  white-space: nowrap;
+}
+
+.perm-hash code {
+  font-size: .74rem;
+  color: #5878a0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.perm-open {
+  margin-left: auto;
+  font-size: .8rem;
+  font-weight: 700;
+  color: #6d28d9;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.perm-open:hover { text-decoration: underline; }
+
+.perm-note {
+  margin: .8rem 0 0;
+  color: #8aa4bf;
+  font-size: .78rem;
+}
 
 /* Hash tooltip */
 .pb-hash-tip { cursor: default; }
