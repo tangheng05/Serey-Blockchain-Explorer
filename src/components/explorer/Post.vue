@@ -78,7 +78,7 @@
               <div class="pb-dot">·</div>
               <div v-if="permanence.has" class="pb-field pb-perm-tip" @mouseenter="showPermTooltip" @mouseleave="hidePermTooltip">
                 <span class="pb-key">Storage</span>
-                <span class="pb-chip permanent">∞ Permanent</span>
+                <button type="button" class="pb-chip permanent" @click="scrollToPermanence">∞ Permanent</button>
               </div>
               <div v-if="permanence.has" class="pb-dot">·</div>
               <div class="pb-field">
@@ -228,6 +228,96 @@
             </section>
           </div>
 
+          <template v-if="permanence.has">
+            <div class="post-divider"></div>
+            <section
+              ref="permSection"
+              class="perm-section"
+              v-motion
+              :initial="{ opacity: 0, y: 18 }"
+              :visible-once="{ opacity: 1, y: 0, transition: { type: 'spring', stiffness: 240, damping: 26 } }"
+            >
+              <h3 class="section-hdg"><span class="accent-dot"></span> Permanent copies</h3>
+
+              <div class="perm-list">
+                <div v-if="permanence.text" class="perm-row">
+                  <div class="perm-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" />
+                      <path d="M14 3v5h5M9 13h6M9 17h6" />
+                    </svg>
+                  </div>
+                  <div class="perm-what">
+                    <span class="perm-name">Post text</span>
+                    <span class="perm-sub">Title and body, exactly as published</span>
+                  </div>
+                  <div class="perm-hash">
+                    <template v-if="permanence.text.sha256">
+                      <span class="perm-hash-key">SHA-256 fingerprint</span>
+                      <button
+                        type="button"
+                        class="perm-hash-val"
+                        :class="{ copied: copiedPerm === permanence.text.sha256 }"
+                        :title="permanence.text.sha256"
+                        @click="copyPerm(permanence.text.sha256)"
+                      >
+                        <code>{{ shortDigest(permanence.text.sha256) }}</code>
+                        <span class="perm-copy">{{ copiedPerm === permanence.text.sha256 ? 'Copied' : 'Copy' }}</span>
+                      </button>
+                    </template>
+                  </div>
+                  <a class="perm-open" :href="arweaveUrl(permanence.text.ar)" target="_blank" rel="noopener noreferrer">
+                    View on Arweave
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M9 7h8v8" /></svg>
+                  </a>
+                </div>
+
+                <div v-for="file in permanence.media" :key="file.ar" class="perm-row">
+                  <div class="perm-icon">
+                    <svg v-if="isImage(file.url)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                      <rect x="3" y="4" width="18" height="16" rx="2" />
+                      <circle cx="9" cy="10" r="1.6" />
+                      <path d="m21 16-5-5-8 8" />
+                    </svg>
+                    <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" />
+                      <path d="M14 3v5h5" />
+                    </svg>
+                  </div>
+                  <div class="perm-what">
+                    <a v-if="file.url" class="perm-name link" :href="file.url" target="_blank" rel="noopener noreferrer" :title="fileName(file.url)">{{ fileName(file.url) }}</a>
+                    <span v-else class="perm-name">Attached file</span>
+                    <span class="perm-sub">{{ isImage(file.url) ? 'Image' : 'File' }} attached to the post</span>
+                  </div>
+                  <div class="perm-hash">
+                    <template v-if="file.s5">
+                      <span class="perm-hash-key">S5 content ID</span>
+                      <button
+                        type="button"
+                        class="perm-hash-val"
+                        :class="{ copied: copiedPerm === file.s5 }"
+                        :title="file.s5"
+                        @click="copyPerm(file.s5)"
+                      >
+                        <code>{{ shortDigest(file.s5) }}</code>
+                        <span class="perm-copy">{{ copiedPerm === file.s5 ? 'Copied' : 'Copy' }}</span>
+                      </button>
+                    </template>
+                  </div>
+                  <a class="perm-open" :href="arweaveUrl(file.ar)" target="_blank" rel="noopener noreferrer">
+                    View on Arweave
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M9 7h8v8" /></svg>
+                  </a>
+                </div>
+              </div>
+
+              <p class="perm-note">
+                A fingerprint is a hash of the exact bytes. If the copy on Arweave produces the same
+                fingerprint, it is identical to what was published. Click one to copy the full value.
+              </p>
+            </section>
+          </template>
+
           <div class="post-divider"></div>
 
           <!-- Votes -->
@@ -254,49 +344,6 @@
             >
               <h3 class="section-hdg"><span class="accent-dot"></span> Beneficiaries</h3>
               <beneficiaries :data="post.beneficiaries" :payout="payout" />
-            </section>
-          </template>
-
-          <template v-if="permanence.has">
-            <div class="post-divider"></div>
-            <section
-              v-motion
-              :initial="{ opacity: 0, y: 18 }"
-              :visible-once="{ opacity: 1, y: 0, transition: { type: 'spring', stiffness: 240, damping: 26 } }"
-            >
-              <h3 class="section-hdg"><span class="accent-dot"></span> Permanent copies</h3>
-              <p class="perm-lede">Copied to Arweave at publication. Nobody can remove them.</p>
-
-              <div class="perm-list">
-                <div v-if="permanence.text" class="perm-row">
-                  <div class="perm-what">
-                    <span class="perm-kind">Text</span>
-                    <span class="perm-name">title and body</span>
-                  </div>
-                  <div class="perm-hashes">
-                    <div v-if="permanence.text.sha256" class="perm-hash">
-                      <span class="perm-hash-key">SHA-256</span>
-                      <code>{{ permanence.text.sha256 }}</code>
-                    </div>
-                  </div>
-                  <a class="perm-open" :href="arweaveUrl(permanence.text.ar)" target="_blank" rel="noopener noreferrer">Open ↗</a>
-                </div>
-
-                <div v-for="file in permanence.media" :key="file.ar" class="perm-row">
-                  <div class="perm-what">
-                    <span class="perm-kind">File</span>
-                    <a v-if="file.url" class="perm-name link" :href="file.url" target="_blank" rel="noopener noreferrer">{{ fileName(file.url) }}</a>
-                    <span v-else class="perm-name">file</span>
-                  </div>
-                  <div class="perm-hashes">
-                    <div v-if="file.s5" class="perm-hash">
-                      <span class="perm-hash-key">S5 CID</span>
-                      <code>{{ file.s5 }}</code>
-                    </div>
-                  </div>
-                  <a class="perm-open" :href="arweaveUrl(file.ar)" target="_blank" rel="noopener noreferrer">Open ↗</a>
-                </div>
-              </div>
             </section>
           </template>
 
@@ -356,6 +403,7 @@ export default {
       EXPLORER: Config.EXPLORER,
       hashTip: { show: false, x: 0, y: 0 },
       hashCopied: false,
+      copiedPerm: null,
       fromOperation: false,
       permTip: { show: false, x: 0, y: 0 },
     }
@@ -461,7 +509,7 @@ export default {
     chainBody() {
       const body = this.post.body || ''
       if (this.chainRecord.hashOnly && /^serey\s*\n?\s*c:/i.test(body.trim())) return ''
-      return body
+      return this.trimTrailingBlanks(body)
     },
 
     /*
@@ -493,7 +541,7 @@ export default {
       // Shown whenever the chain is not already printing the same prose --
       // a hash-only post, or one whose chain record carries no body at all.
       if (this.chainBody) return ''
-      return fromApi
+      return this.trimTrailingBlanks(fromApi)
     },
 
     permanence() {
@@ -571,8 +619,31 @@ export default {
       this.hashCopied = true
       setTimeout(() => { this.hashCopied = false }, 1400)
     },
+    // Editors leave `<p><br></p>` / `<p>&nbsp;</p>` at the end of a post;
+    // each one renders as a blank line under the last real block.
+    trimTrailingBlanks(html) {
+      return String(html || '').replace(/(?:\s*<(p|div)[^>]*>(?:\s|&nbsp;|<br\s*\/?>)*<\/\1>)+\s*$/gi, '')
+    },
     arweaveUrl(id) {
       return `https://arweave.net/${id}`
+    },
+    isImage(url) {
+      return /\.(png|jpe?g|gif|webp|avif|svg|bmp)$/i.test(String(url || '').split('?')[0])
+    },
+    shortDigest(value) {
+      const v = String(value || '')
+      return v.length > 22 ? `${v.slice(0, 10)}…${v.slice(-8)}` : v
+    },
+    async copyPerm(value) {
+      if (!value) return
+      try {
+        await navigator.clipboard.writeText(value)
+      } catch (e) {
+        return
+      }
+      this.copiedPerm = value
+      clearTimeout(this._permCopyTimer)
+      this._permCopyTimer = setTimeout(() => { this.copiedPerm = null }, 1400)
     },
     fileName(url) {
       try { return decodeURIComponent(String(url).split('/').pop()) } catch (e) { return url }
@@ -583,6 +654,11 @@ export default {
     },
     hidePermTooltip() {
       this.permTip.show = false
+    },
+    scrollToPermanence() {
+      this.hidePermTooltip()
+      const el = this.$refs.permSection
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
     },
     showHashTooltip(e) {
       const rect = e.currentTarget.getBoundingClientRect()
@@ -1065,7 +1141,7 @@ export default {
 
 /* ── Post body typography ── */
 .post-body {
-  padding: 0.75rem 2.5rem 2.5rem;
+  padding: 0.75rem 2.5rem 1.75rem;
   font-family: 'Lora', serif;
   font-size: 1.05rem;
   line-height: 1.82;
@@ -1103,6 +1179,11 @@ export default {
   transform: scale(1.01);
   box-shadow: 0 8px 40px rgba(21,5,120,.15);
 }
+
+/* No stacked margins after the last block, so an image that closes the
+   post sits on the card's own padding instead of a wall of empty space. */
+.post-body :deep(> :last-child),
+.post-body :deep(> :last-child > img:last-child) { margin-bottom: 0; }
 
 .post-body :deep(a) { color: #449dd1; text-underline-offset: 3px; }
 .post-body :deep(p) { margin-bottom: 1.25em; }
@@ -1305,7 +1386,8 @@ export default {
 }
 .pb-chip.intact  { background: #192bc2; color: #ffffff; }
 .pb-chip.unknown { background: #eef5fb; color: #5878a0; border: 1px solid #c8dff0; }
-.pb-chip.permanent { background: #6d28d9; color: #ffffff; }
+.pb-chip.permanent { background: #6d28d9; color: #ffffff; border: 0; cursor: pointer; transition: background .15s ease; }
+.pb-chip.permanent:hover { background: #5b21b6; }
 
 .pb-hash-val {
   padding: .17em .55em;
@@ -1361,84 +1443,150 @@ export default {
 /* Permanent copies */
 .pb-perm-tip { cursor: default; }
 
-.perm-lede {
-  margin: 0 0 .75rem;
-  color: #7e97b4;
-  font-size: .82rem;
-}
+.perm-section { scroll-margin-top: 96px; }
 
 .perm-list {
   display: flex;
   flex-direction: column;
-  gap: .5rem;
+  border: 1px solid #e6eef7;
+  border-radius: 12px;
+  background: #ffffff;
+  overflow: hidden;
 }
 
 .perm-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto minmax(11rem, 1fr) minmax(0, 1.1fr) auto;
   align-items: center;
-  gap: 1rem;
-  flex-wrap: wrap;
-  padding: .6rem .85rem;
-  border: 1px solid #e6eef7;
-  border-radius: 8px;
-  background: #fbfcfe;
+  gap: 1.1rem;
+  padding: .85rem 1rem;
 }
+.perm-row + .perm-row { border-top: 1px solid #eef3f9; }
+
+.perm-icon {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: #f1ecfd;
+  color: #6d28d9;
+  flex-shrink: 0;
+}
+.perm-icon svg { width: 20px; height: 20px; }
 
 .perm-what {
   display: flex;
-  align-items: baseline;
-  gap: .5rem;
-  min-width: 11rem;
+  flex-direction: column;
+  gap: .12rem;
+  min-width: 0;
 }
 
-.perm-kind {
+.perm-name {
+  color: #0e0e52;
   font-family: 'Outfit', sans-serif;
-  font-size: .66rem;
-  font-weight: 800;
-  letter-spacing: .05em;
-  text-transform: uppercase;
-  color: #5878a0;
+  font-weight: 700;
+  font-size: .92rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
-
-.perm-name { color: #2c4a6b; font-size: .9rem; }
 .perm-name.link { color: #192bc2; text-decoration: none; }
 .perm-name.link:hover { text-decoration: underline; }
 
-.perm-hashes { flex: 1 1 18rem; min-width: 0; }
+.perm-sub {
+  color: #7e97b4;
+  font-size: .76rem;
+}
 
 .perm-hash {
   display: flex;
-  align-items: baseline;
-  gap: .5rem;
+  flex-direction: column;
+  gap: .28rem;
   min-width: 0;
 }
 
 .perm-hash-key {
+  font-family: 'Outfit', sans-serif;
   font-size: .62rem;
   font-weight: 800;
-  letter-spacing: .05em;
+  letter-spacing: .06em;
+  text-transform: uppercase;
   color: #8aa4bf;
   white-space: nowrap;
 }
 
-.perm-hash code {
+.perm-hash-val {
+  display: inline-flex;
+  align-items: center;
+  gap: .55rem;
+  width: fit-content;
+  max-width: 100%;
+  padding: .3rem .55rem;
+  border: 1px solid #dbe6f2;
+  border-radius: 7px;
+  background: #f6f9fd;
+  cursor: pointer;
+  transition: background .15s ease, border-color .15s ease;
+}
+.perm-hash-val:hover { background: #eef4fb; border-color: #c8dff0; }
+.perm-hash-val.copied { background: #e8f7ee; border-color: #b7e4c7; }
+
+.perm-hash-val code {
   font-size: .74rem;
-  color: #5878a0;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  color: #2c4a6b;
   white-space: nowrap;
-  min-width: 0;
 }
 
-.perm-open {
-  margin-left: auto;
-  font-size: .8rem;
-  font-weight: 700;
+.perm-copy {
+  font-family: 'Outfit', sans-serif;
+  font-size: .64rem;
+  font-weight: 800;
+  letter-spacing: .05em;
+  text-transform: uppercase;
   color: #192bc2;
+}
+.perm-hash-val.copied .perm-copy { color: #1f8a4c; }
+
+.perm-open {
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+  padding: .45rem .8rem;
+  border-radius: 8px;
+  background: #6d28d9;
+  color: #ffffff;
+  font-family: 'Outfit', sans-serif;
+  font-size: .78rem;
+  font-weight: 700;
   text-decoration: none;
   white-space: nowrap;
+  transition: background .15s ease;
 }
-.perm-open:hover { text-decoration: underline; }
+.perm-open:hover { background: #5b21b6; color: #ffffff; text-decoration: none; }
+.perm-open svg { width: 14px; height: 14px; }
+
+.perm-note {
+  margin: .75rem 0 0;
+  color: #8aa4bf;
+  font-size: .76rem;
+  line-height: 1.55;
+}
+
+@media (max-width: 720px) {
+  .perm-row {
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas:
+      "icon what"
+      "hash hash"
+      "open open";
+    gap: .6rem .8rem;
+  }
+  .perm-icon { grid-area: icon; }
+  .perm-what { grid-area: what; }
+  .perm-hash { grid-area: hash; }
+  .perm-open { grid-area: open; justify-content: center; }
+}
 
 /* Hash tooltip */
 .pb-hash-tip { cursor: default; }
