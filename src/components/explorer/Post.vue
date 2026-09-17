@@ -332,8 +332,7 @@
               </div>
 
               <p class="perm-note">
-                A fingerprint is a hash of the exact bytes. If the copy on Arweave produces the same
-                fingerprint, it is identical to what was published. Click one to copy the full value.
+                A matching fingerprint means the Arweave copy is identical to what was published. Click one to copy it.
               </p>
             </section>
           </template>
