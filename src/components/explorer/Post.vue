@@ -135,49 +135,6 @@
           </div>
         </Teleport>
 
-        <!-- ── PERMANENT COPIES — full width, directly under the passport bar ── -->
-        <section
-          v-if="permanence.has"
-          class="perm-section"
-          v-motion
-          :initial="{ opacity: 0, y: -10 }"
-          :enter="{ opacity: 1, y: 0, transition: { type: 'spring', stiffness: 300, damping: 26, delay: 120 } }"
-        >
-          <h3 class="section-hdg"><span class="accent-dot"></span> Permanent copies</h3>
-          <p class="perm-lede">Copied to Arweave at publication. Nobody can remove them.</p>
-
-          <div class="perm-list">
-            <div v-if="permanence.text" class="perm-row">
-              <div class="perm-what">
-                <span class="perm-kind">Text</span>
-                <span class="perm-name">title and body</span>
-              </div>
-              <div class="perm-hashes">
-                <div v-if="permanence.text.sha256" class="perm-hash">
-                  <span class="perm-hash-key">SHA-256</span>
-                  <code>{{ permanence.text.sha256 }}</code>
-                </div>
-              </div>
-              <a class="perm-open" :href="arweaveUrl(permanence.text.ar)" target="_blank" rel="noopener noreferrer">Open ↗</a>
-            </div>
-
-            <div v-for="file in permanence.media" :key="file.ar" class="perm-row">
-              <div class="perm-what">
-                <span class="perm-kind">File</span>
-                <a v-if="file.url" class="perm-name link" :href="file.url" target="_blank" rel="noopener noreferrer">{{ fileName(file.url) }}</a>
-                <span v-else class="perm-name">file</span>
-              </div>
-              <div class="perm-hashes">
-                <div v-if="file.s5" class="perm-hash">
-                  <span class="perm-hash-key">S5 CID</span>
-                  <code>{{ file.s5 }}</code>
-                </div>
-              </div>
-              <a class="perm-open" :href="arweaveUrl(file.ar)" target="_blank" rel="noopener noreferrer">Open ↗</a>
-            </div>
-          </div>
-        </section>
-
         <!-- ── SIDEBAR ── -->
         <aside class="post-sidebar">
           <div
@@ -297,6 +254,49 @@
             >
               <h3 class="section-hdg"><span class="accent-dot"></span> Beneficiaries</h3>
               <beneficiaries :data="post.beneficiaries" :payout="payout" />
+            </section>
+          </template>
+
+          <template v-if="permanence.has">
+            <div class="post-divider"></div>
+            <section
+              v-motion
+              :initial="{ opacity: 0, y: 18 }"
+              :visible-once="{ opacity: 1, y: 0, transition: { type: 'spring', stiffness: 240, damping: 26 } }"
+            >
+              <h3 class="section-hdg"><span class="accent-dot"></span> Permanent copies</h3>
+              <p class="perm-lede">Copied to Arweave at publication. Nobody can remove them.</p>
+
+              <div class="perm-list">
+                <div v-if="permanence.text" class="perm-row">
+                  <div class="perm-what">
+                    <span class="perm-kind">Text</span>
+                    <span class="perm-name">title and body</span>
+                  </div>
+                  <div class="perm-hashes">
+                    <div v-if="permanence.text.sha256" class="perm-hash">
+                      <span class="perm-hash-key">SHA-256</span>
+                      <code>{{ permanence.text.sha256 }}</code>
+                    </div>
+                  </div>
+                  <a class="perm-open" :href="arweaveUrl(permanence.text.ar)" target="_blank" rel="noopener noreferrer">Open ↗</a>
+                </div>
+
+                <div v-for="file in permanence.media" :key="file.ar" class="perm-row">
+                  <div class="perm-what">
+                    <span class="perm-kind">File</span>
+                    <a v-if="file.url" class="perm-name link" :href="file.url" target="_blank" rel="noopener noreferrer">{{ fileName(file.url) }}</a>
+                    <span v-else class="perm-name">file</span>
+                  </div>
+                  <div class="perm-hashes">
+                    <div v-if="file.s5" class="perm-hash">
+                      <span class="perm-hash-key">S5 CID</span>
+                      <code>{{ file.s5 }}</code>
+                    </div>
+                  </div>
+                  <a class="perm-open" :href="arweaveUrl(file.ar)" target="_blank" rel="noopener noreferrer">Open ↗</a>
+                </div>
+              </div>
             </section>
           </template>
 
@@ -841,7 +841,7 @@ export default {
   padding: 2rem 1.5rem 5rem;
   display: grid;
   grid-template-columns: 280px 1fr;
-  grid-template-rows: auto auto auto;
+  grid-template-rows: auto auto;
   gap: 1rem 2rem;
   align-items: start;
 }
@@ -852,20 +852,14 @@ export default {
   grid-row: 1;
 }
 
-/* Permanent copies sits right under the passport, spanning both columns */
-.post-layout > .perm-section {
-  grid-column: 1 / -1;
-  grid-row: 2;
-}
-
 .post-layout > .post-sidebar {
   grid-column: 1;
-  grid-row: 3;
+  grid-row: 2;
 }
 
 .post-layout > .post-main {
   grid-column: 2;
-  grid-row: 3;
+  grid-row: 2;
 }
 
 /* ── Sidebar ── */
@@ -1367,16 +1361,6 @@ export default {
 /* Permanent copies */
 .pb-perm-tip { cursor: default; }
 
-.perm-section {
-  padding: 1.15rem 1.35rem 1.35rem;
-  background: #ffffff;
-  border: 1px solid #c8dff0;
-  border-radius: 14px;
-  box-shadow: 0 1px 2px rgba(14,14,82,.04), 0 4px 16px rgba(14,14,82,.06);
-}
-
-.perm-section .section-hdg { margin-bottom: .5rem; }
-
 .perm-lede {
   margin: 0 0 .75rem;
   color: #7e97b4;
@@ -1594,14 +1578,13 @@ export default {
   .skeleton-layout,
   .post-layout {
     grid-template-columns: 1fr;
-    grid-template-rows: auto auto auto auto;
+    grid-template-rows: auto auto auto;
     padding: .75rem .75rem 3rem;
     gap: .85rem;
   }
-  .post-layout > .passport-bar  { grid-column: 1 !important; grid-row: 1; }
-  .post-layout > .perm-section  { grid-column: 1 !important; grid-row: 2; }
-  .post-layout > .post-main     { grid-column: 1 !important; grid-row: 3; }
-  .post-layout > .post-sidebar  { grid-column: 1 !important; grid-row: 4; }
+  .post-layout > .passport-bar { grid-column: 1 !important; grid-row: 1; }
+  .post-layout > .post-main    { grid-column: 1 !important; grid-row: 2; }
+  .post-layout > .post-sidebar { grid-column: 1 !important; grid-row: 3; }
 
   /* Sidebar: two columns on tablet */
   .skeleton-sidebar,
