@@ -268,10 +268,7 @@
               :visible-once="{ opacity: 1, y: 0, transition: { type: 'spring', stiffness: 240, damping: 26 } }"
             >
               <h3 class="section-hdg"><span class="accent-dot"></span> Permanent copies</h3>
-              <p class="perm-lede">
-                Copied to Arweave when this post was published. Anyone can fetch them and check
-                the hashes below; nobody can remove them.
-              </p>
+              <p class="perm-lede">Copied to Arweave at publication. Nobody can remove them.</p>
 
               <div class="perm-list">
                 <div v-if="permanence.text" class="perm-row">
@@ -283,10 +280,6 @@
                     <div v-if="permanence.text.sha256" class="perm-hash">
                       <span class="perm-hash-key">SHA-256</span>
                       <code>{{ permanence.text.sha256 }}</code>
-                    </div>
-                    <div v-if="chainRecord.commitment" class="perm-hash">
-                      <span class="perm-hash-key">On chain</span>
-                      <code>{{ chainRecord.commitment }}</code>
                     </div>
                   </div>
                   <a class="perm-open" :href="arweaveUrl(permanence.text.ar)" target="_blank" rel="noopener noreferrer">Open ↗</a>
@@ -307,11 +300,6 @@
                   <a class="perm-open" :href="arweaveUrl(file.ar)" target="_blank" rel="noopener noreferrer">Open ↗</a>
                 </div>
               </div>
-
-              <p class="perm-note">
-                A copy made in the last hour may not answer yet while it is written to the
-                chain — the link starts working on its own.
-              </p>
             </section>
           </template>
 
@@ -1362,10 +1350,9 @@ export default {
 .pb-perm-tip { cursor: default; }
 
 .perm-lede {
-  margin: 0 0 .9rem;
-  color: #5878a0;
-  font-size: .86rem;
-  line-height: 1.5;
+  margin: 0 0 .75rem;
+  color: #7e97b4;
+  font-size: .82rem;
 }
 
 .perm-list {
@@ -1379,9 +1366,8 @@ export default {
   align-items: center;
   gap: 1rem;
   flex-wrap: wrap;
-  padding: .7rem .9rem;
+  padding: .6rem .85rem;
   border: 1px solid #e6eef7;
-  border-left: 3px solid #6d28d9;
   border-radius: 8px;
   background: #fbfcfe;
 }
@@ -1399,7 +1385,7 @@ export default {
   font-weight: 800;
   letter-spacing: .05em;
   text-transform: uppercase;
-  color: #6d28d9;
+  color: #5878a0;
 }
 
 .perm-name { color: #2c4a6b; font-size: .9rem; }
@@ -1436,17 +1422,11 @@ export default {
   margin-left: auto;
   font-size: .8rem;
   font-weight: 700;
-  color: #6d28d9;
+  color: #192bc2;
   text-decoration: none;
   white-space: nowrap;
 }
 .perm-open:hover { text-decoration: underline; }
-
-.perm-note {
-  margin: .8rem 0 0;
-  color: #8aa4bf;
-  font-size: .78rem;
-}
 
 /* Hash tooltip */
 .pb-hash-tip { cursor: default; }
