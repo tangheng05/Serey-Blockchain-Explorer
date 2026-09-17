@@ -82,13 +82,6 @@
               </div>
               <div v-if="permanence.has" class="pb-dot">·</div>
               <div class="pb-field">
-                <span class="pb-key">AI</span>
-                <span :class="['pb-chip', passportMeta.aiGenerated === true ? 'ai-yes' : passportMeta.aiGenerated === false ? 'ai-no' : 'unknown']">
-                  {{ passportMeta.aiGenerated === true ? 'Yes' : passportMeta.aiGenerated === false ? 'No' : 'Unknown' }}
-                </span>
-              </div>
-              <div class="pb-dot">·</div>
-              <div class="pb-field">
                 <span class="pb-key">TX</span>
                 <span class="pb-val mono">#{{ post.id }}</span>
               </div>
@@ -200,14 +193,18 @@
             :initial="{ opacity: 0, y: 20 }"
             :enter="{ opacity: 1, y: 0, transition: { type: 'spring', stiffness: 260, damping: 24, delay: 100 } }"
           >
-            <header v-if="post.depth !== 0 || post.title" class="post-hero">
-              <h1 v-if="post.depth === 0 && displayTitle" class="post-title">{{ displayTitle }}</h1>
-              <template v-else>
+            <header v-if="isComment || displayTitle || textRemoved" class="post-hero">
+              <h1 v-if="!isComment && displayTitle" class="post-title">{{ displayTitle }}</h1>
+              <template v-else-if="isComment">
                 <h1 class="post-title">Comment</h1>
                 <div class="comment-breadcrumbs">
-                  <router-link v-if="post.depth > 1" :to="EXPLORER + '@' + post.parent_author + '/' + post.parent_permlink">← Parent Comment</router-link>
-                  <router-link :to="EXPLORER + '@' + post.root_author + '/' + post.root_permlink">↑ Root Post</router-link>
+                  <router-link v-if="post.depth > 1 && post.parent_author" :to="EXPLORER + '@' + post.parent_author + '/' + post.parent_permlink">← Parent Comment</router-link>
+                  <router-link v-if="post.root_author && post.root_permlink" :to="EXPLORER + '@' + post.root_author + '/' + post.root_permlink">↑ Root Post</router-link>
                 </div>
+              </template>
+              <template v-else>
+                <h1 class="post-title removed">Text removed</h1>
+                <p class="removed-note">Serey no longer serves this post's words. Its record stays on the chain.</p>
               </template>
             </header>
 
@@ -422,6 +419,25 @@ export default {
     | The chain's title for a hash-only post is the marker word, not a
     | title -- printing it as the headline reads as a post called "serey".
     */
+    // A reply is what the chain's depth says it is. Reading "no title" as
+    // "this is a reply" pointed Root Post at @undefined the moment a post
+    // had no text left to show.
+    isComment() {
+      return Number(this.post.depth) > 0
+    },
+
+    /*
+    | On chain, with nothing readable left. A hash-only post keeps its words
+    | off the chain, so its text comes from Serey's copy; once that copy is
+    | taken down the post still exists -- author, timestamp, fingerprint, id
+    | -- but there is no prose to print. That is worth saying plainly rather
+    | than rendering an untitled page.
+    */
+    textRemoved() {
+      if (this.isComment || !this.post.id) return false
+      return !this.displayTitle && !this.chainBody && !this.serveyCopy && !this.postVideos.length
+    },
+
     displayTitle() {
       const title = (this.post.title || '').trim()
       if (this.chainRecord.hashOnly && /^serey$/i.test(title)) {
@@ -489,16 +505,6 @@ export default {
       const text = block.post && block.post.ar ? block.post : null
       const media = (block.media || []).filter((m) => m && m.ar)
       return { has: Boolean(text || media.length), text, media }
-    },
-
-    passportMeta() {
-      let meta = {}
-      try { meta = JSON.parse(this.post.json_metadata || '{}') } catch (e) { /* */ }
-      const aiGenerated =
-        'ai_generated' in meta ? Boolean(meta.ai_generated) :
-        'ai' in meta ? Boolean(meta.ai) :
-        null
-      return { aiGenerated }
     },
 
   },
@@ -1298,8 +1304,6 @@ export default {
   font-family: 'Outfit', sans-serif;
 }
 .pb-chip.intact  { background: #192bc2; color: #ffffff; }
-.pb-chip.ai-yes  { background: #dbeafe; color: #1e40af; border: 1px solid #93c5fd; }
-.pb-chip.ai-no   { background: #192bc2; color: #ffffff; }
 .pb-chip.unknown { background: #eef5fb; color: #5878a0; border: 1px solid #c8dff0; }
 .pb-chip.permanent { background: #6d28d9; color: #ffffff; }
 
@@ -1322,6 +1326,14 @@ export default {
   background: #192bc2;
   border-color: #192bc2;
   color: #ffffff;
+}
+
+.post-title.removed { color: #5878a0; }
+
+.removed-note {
+  margin: .5rem 0 0;
+  font-size: .86rem;
+  color: #8aa4bf;
 }
 
 /* Video posts */
