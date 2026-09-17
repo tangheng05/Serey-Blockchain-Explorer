@@ -78,7 +78,8 @@
               <div class="pb-dot">·</div>
               <div v-if="permanence.has" class="pb-field pb-perm-tip" @mouseenter="showPermTooltip" @mouseleave="hidePermTooltip">
                 <span class="pb-key">Storage</span>
-                <button type="button" class="pb-chip permanent" @click="scrollToPermanence">∞ Permanent</button>
+                <button v-if="archiving" type="button" class="pb-chip archiving" @click="scrollToPermanence"><span class="pulse-dot"></span>Archiving</button>
+                <button v-else type="button" class="pb-chip permanent" @click="scrollToPermanence">∞ Permanent</button>
               </div>
               <div v-if="permanence.has" class="pb-dot">·</div>
               <div class="pb-field">
@@ -130,8 +131,14 @@
 
         <Teleport to="body">
           <div v-if="permTip.show" class="pb-tip-box" :style="{ top: permTip.y + 'px', left: permTip.x + 'px' }">
-            <strong>Stored permanently</strong>
-            <p>This post's text and files were copied to Arweave, a public network with no delete. Not even Serey can remove them. See the copies below.</p>
+            <template v-if="archiving">
+              <strong>Being archived</strong>
+              <p>This post's text and files have been sent to Arweave and are waiting for the network to confirm them. Once confirmed, nobody can remove them.</p>
+            </template>
+            <template v-else>
+              <strong>Stored permanently</strong>
+              <p>This post's text and files were copied to Arweave, a public network with no delete. Not even Serey can remove them. See the copies below.</p>
+            </template>
           </div>
         </Teleport>
 
@@ -237,7 +244,14 @@
               :initial="{ opacity: 0, y: 18 }"
               :visible-once="{ opacity: 1, y: 0, transition: { type: 'spring', stiffness: 240, damping: 26 } }"
             >
-              <h3 class="section-hdg"><span class="accent-dot"></span> Permanent copies</h3>
+              <h3 class="section-hdg">
+                <span class="accent-dot"></span> Permanent copies
+                <span v-if="archiving" class="perm-status archiving"><span class="pulse-dot"></span>Archiving</span>
+                <span v-else-if="arweave.state === 'permanent'" class="perm-status confirmed">✓ Confirmed</span>
+              </h3>
+              <p v-if="archiving" class="perm-lede">
+                Uploaded and waiting for the Arweave network to confirm. This usually takes a few minutes; the page checks again automatically.
+              </p>
 
               <div class="perm-list">
                 <div v-if="permanence.text" class="perm-row">
@@ -248,7 +262,10 @@
                     </svg>
                   </div>
                   <div class="perm-what">
-                    <span class="perm-name">Post text</span>
+                    <span class="perm-name">
+                      Post text
+                      <span v-if="arweave.state !== 'unknown'" class="perm-state" :class="arweave.confirmed[permanence.text.ar] ? 'ok' : 'pending'">{{ arweave.confirmed[permanence.text.ar] ? 'Confirmed' : 'Pending' }}</span>
+                    </span>
                     <span class="perm-sub">Title and body, exactly as published</span>
                   </div>
                   <div class="perm-hash">
@@ -285,8 +302,11 @@
                     </svg>
                   </div>
                   <div class="perm-what">
-                    <a v-if="file.url" class="perm-name link" :href="file.url" target="_blank" rel="noopener noreferrer" :title="fileName(file.url)">{{ fileName(file.url) }}</a>
-                    <span v-else class="perm-name">Attached file</span>
+                    <span class="perm-name">
+                      <a v-if="file.url" class="link" :href="file.url" target="_blank" rel="noopener noreferrer" :title="fileName(file.url)">{{ fileName(file.url) }}</a>
+                      <template v-else>Attached file</template>
+                      <span v-if="arweave.state !== 'unknown'" class="perm-state" :class="arweave.confirmed[file.ar] ? 'ok' : 'pending'">{{ arweave.confirmed[file.ar] ? 'Confirmed' : 'Pending' }}</span>
+                    </span>
                     <span class="perm-sub">{{ isImage(file.url) ? 'Image' : 'File' }} attached to the post</span>
                   </div>
                   <div class="perm-hash">
@@ -404,6 +424,9 @@ export default {
       hashTip: { show: false, x: 0, y: 0 },
       hashCopied: false,
       copiedPerm: null,
+      // Whether Arweave has actually confirmed each copy. 'unknown' until the
+      // gateway answers (or if it never does), then 'archiving' / 'permanent'.
+      arweave: { state: 'unknown', confirmed: {} },
       fromOperation: false,
       permTip: { show: false, x: 0, y: 0 },
     }
@@ -544,6 +567,10 @@ export default {
       return this.trimTrailingBlanks(fromApi)
     },
 
+    archiving() {
+      return this.permanence.has && this.arweave.state === 'archiving'
+    },
+
     permanence() {
       let meta = {}
       try { meta = JSON.parse(this.post.json_metadata || '{}') } catch (e) { /* */ }
@@ -570,6 +597,7 @@ export default {
 
   beforeUnmount() {
     window.removeEventListener('scroll', this.onScroll)
+    this.stopArweaveCheck()
   },
 
   methods: {
@@ -619,6 +647,45 @@ export default {
       this.hashCopied = true
       setTimeout(() => { this.hashCopied = false }, 1400)
     },
+    /*
+    | Ask the Arweave gateway which copies are actually in a block. The
+    | chain's `arweave` block is written as soon as the upload is accepted,
+    | which can be well before the network has mined it. Until every copy
+    | has a block the post is still "archiving", the same state Serey shows.
+    | Items are bundled, so /tx/<id>/status knows nothing about them; the
+    | GraphQL index does.
+    */
+    async checkArweave() {
+      const ids = [
+        this.permanence.text && this.permanence.text.ar,
+        ...this.permanence.media.map(m => m.ar),
+      ].filter(Boolean)
+      if (!ids.length) return
+
+      const query = `{ transactions(ids: ${JSON.stringify(ids)}) { edges { node { id block { height } } } } }`
+      let edges
+      try {
+        const res = await axios.post('https://arweave.net/graphql', { query }, { timeout: 15000 })
+        edges = res.data && res.data.data && res.data.data.transactions && res.data.data.transactions.edges
+      } catch (e) {
+        return
+      }
+      if (!Array.isArray(edges)) return
+
+      const confirmed = {}
+      for (const { node } of edges) {
+        if (node && node.block && node.block.height) confirmed[node.id] = true
+      }
+      const all = ids.every(id => confirmed[id])
+      this.arweave = { state: all ? 'permanent' : 'archiving', confirmed }
+
+      if (!all) this._arweaveTimer = setTimeout(() => this.checkArweave(), 60000)
+    },
+    stopArweaveCheck() {
+      clearTimeout(this._arweaveTimer)
+      this._arweaveTimer = null
+    },
+
     // Editors leave `<p><br></p>` / `<p>&nbsp;</p>` at the end of a post;
     // each one renders as a blank line under the last real block.
     trimTrailingBlanks(html) {
@@ -738,6 +805,10 @@ export default {
       // intact. The operation itself is the chain record, so read that
       // instead rather than reporting nothing.
       if (!this.contentServed) await this.fillFromOperation(author, permlink)
+
+      this.stopArweaveCheck()
+      this.arweave = { state: 'unknown', confirmed: {} }
+      this.checkArweave()
 
       const no_keys = ['body', 'json_metadata', 'beneficiaries', 'active_votes', 'replies', 'body_length', 'reblogged_by']
       const pst = {}
@@ -1388,6 +1459,28 @@ export default {
 .pb-chip.unknown { background: #eef5fb; color: #5878a0; border: 1px solid #c8dff0; }
 .pb-chip.permanent { background: #6d28d9; color: #ffffff; border: 0; cursor: pointer; transition: background .15s ease; }
 .pb-chip.permanent:hover { background: #5b21b6; }
+.pb-chip.archiving {
+  gap: .4em;
+  background: #fff4d6;
+  color: #9a5b00;
+  border: 1px solid #f3d38a;
+  cursor: pointer;
+  transition: background .15s ease;
+}
+.pb-chip.archiving:hover { background: #ffe9b3; }
+
+.pulse-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #e0a100;
+  animation: perm-pulse 1.4s ease-in-out infinite;
+}
+@keyframes perm-pulse {
+  0%, 100% { opacity: .35; transform: scale(.85); }
+  50%      { opacity: 1;   transform: scale(1); }
+}
 
 .pb-hash-val {
   padding: .17em .55em;
@@ -1445,6 +1538,42 @@ export default {
 
 .perm-section { scroll-margin-top: 96px; }
 
+.perm-status {
+  display: inline-flex;
+  align-items: center;
+  gap: .4em;
+  margin-left: .35rem;
+  padding: .2em .6em;
+  border-radius: 999px;
+  font-size: .66rem;
+  font-weight: 800;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+.perm-status.archiving { background: #fff4d6; color: #9a5b00; border: 1px solid #f3d38a; }
+.perm-status.confirmed { background: #e8f7ee; color: #1f8a4c; border: 1px solid #b7e4c7; }
+
+.perm-lede {
+  margin: -.4rem 0 1rem;
+  color: #9a5b00;
+  font-size: .82rem;
+  line-height: 1.55;
+}
+
+.perm-state {
+  display: inline-block;
+  vertical-align: middle;
+  margin-left: .45rem;
+  padding: .12em .5em;
+  border-radius: 999px;
+  font-size: .6rem;
+  font-weight: 800;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+.perm-state.ok      { background: #e8f7ee; color: #1f8a4c; }
+.perm-state.pending { background: #fff4d6; color: #9a5b00; }
+
 .perm-list {
   display: flex;
   flex-direction: column;
@@ -1491,8 +1620,8 @@ export default {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.perm-name.link { color: #192bc2; text-decoration: none; }
-.perm-name.link:hover { text-decoration: underline; }
+.perm-name .link { color: #192bc2; text-decoration: none; }
+.perm-name .link:hover { text-decoration: underline; }
 
 .perm-sub {
   color: #7e97b4;
