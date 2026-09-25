@@ -235,6 +235,29 @@
             </section>
           </div>
 
+          <!-- Comments: each with its own fingerprint on chain -->
+          <template v-if="!isComment">
+            <div class="post-divider"></div>
+            <section
+              class="comment-section"
+              v-motion
+              :initial="{ opacity: 0, y: 40 }"
+              :visible-once="{ opacity: 1, y: 0, transition: { type: 'spring', stiffness: 240, damping: 26, delay: 60 } }"
+            >
+              <h3 class="section-hdg">
+                <span class="accent-dot"></span>
+                {{ commentCount }} {{ commentCount === 1 ? 'Comment' : 'Comments' }}
+              </h3>
+              <post-comments
+                :author="post.author"
+                :permlink="post.permlink"
+                :api-replies="apiReplies"
+                :api-available="apiAvailable"
+                @count="commentCount = $event"
+              />
+            </section>
+          </template>
+
           <template v-if="permanence.has">
             <div class="post-divider"></div>
             <section
@@ -391,6 +414,7 @@ import Config from '@/config.js'
 import AppHeader from '@/components/layout/AppHeader'
 import CardData from '@/components/explorer/CardData'
 import Votes from '@/components/explorer/Votes'
+import PostComments from '@/components/explorer/PostComments'
 import Beneficiaries from '@/components/explorer/Beneficiaries'
 import { useChainProperties } from '@/composables/useChainProperties.js'
 import { useRPCNode } from '@/composables/useRPCNode.js'
@@ -399,7 +423,7 @@ import axios from 'axios'
 
 export default {
   name: 'Post',
-  components: { AppHeader, CardData, Votes, Beneficiaries },
+  components: { AppHeader, CardData, Votes, Beneficiaries, PostComments },
 
   setup() {
     const chainProps = useChainProperties()
@@ -412,6 +436,9 @@ export default {
     return {
       post: {},
       postDetail: null,
+      apiReplies: [],
+      apiAvailable: false,
+      commentCount: 0,
       postGenerals: {},
       payout: { total: '', card: {} },
       sereyPrice: null,
@@ -788,8 +815,12 @@ export default {
         this.steem_database_call('get_content', [author, permlink]),
       ])
 
+      this.apiReplies = []
+      this.apiAvailable = false
       if (postDetailRes.status === 'fulfilled') {
         this.postDetail = postDetailRes.value.data.content
+        this.apiReplies = postDetailRes.value.data.replies || []
+        this.apiAvailable = Boolean(this.postDetail)
       }
 
       if (result.status !== 'fulfilled') return
