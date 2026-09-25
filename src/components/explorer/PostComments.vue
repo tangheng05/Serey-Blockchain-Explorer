@@ -125,7 +125,8 @@ export default {
         date: rec ? this.formatDate(rec.created + 'Z') : this.formatDate(api && api.publish_date),
         payout: rec ? this.payoutOf(rec) : '',
         // Pre-hash comments carry their words on chain; Serey's copy wins when present.
-        html: (api && api.description) || (rec && rec.text) || '',
+        // A comment added since the API cached the tree carries `body`, not `description`.
+        html: (api && (api.description || api.body)) || (rec && rec.text) || '',
       }
     },
 
