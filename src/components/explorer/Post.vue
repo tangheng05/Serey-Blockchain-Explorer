@@ -937,9 +937,13 @@ export default {
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Lora:ital,wght@0,400;0,500;1,400&display=swap');
 
 /* ── Reading progress bar ── */
+/* Sits on the header's bottom border, not the viewport's top edge: Safari 26
+   (and Telegram's in-app browser on iOS) colours its see-through top bar from
+   the fixed element touching that edge. A gradient bar there gives it nothing
+   to sample, so the page shows through above the header. */
 .progress-bar {
   position: fixed;
-  top: 0;
+  top: 58px;
   left: 0;
   width: 100%;
   height: 3px;
