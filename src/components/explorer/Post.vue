@@ -232,6 +232,46 @@
               ></video>
             </div>
 
+            <div v-if="postImages.length" class="post-gallery">
+              <div
+                class="gallery-stage"
+                :class="{ multi: postImages.length > 1 }"
+                @touchstart.passive="onGalleryTouchStart"
+                @touchend.passive="onGalleryTouchEnd"
+              >
+                <a
+                  v-for="(src, i) in postImages"
+                  v-show="i === galleryIndex"
+                  :key="src"
+                  class="gallery-slide"
+                  :href="src"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <img :src="src" :alt="`Image ${i + 1} of ${postImages.length}`" :loading="i === 0 ? 'eager' : 'lazy'" />
+                </a>
+                <template v-if="postImages.length > 1">
+                  <span class="gallery-count">{{ galleryIndex + 1 }}/{{ postImages.length }}</span>
+                  <button type="button" class="gallery-nav prev" :disabled="galleryIndex === 0" aria-label="Previous image" @click="showImage(galleryIndex - 1)">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6" /></svg>
+                  </button>
+                  <button type="button" class="gallery-nav next" :disabled="galleryIndex === postImages.length - 1" aria-label="Next image" @click="showImage(galleryIndex + 1)">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6" /></svg>
+                  </button>
+                  <div class="gallery-dots">
+                    <button
+                      v-for="(src, i) in postImages"
+                      :key="src"
+                      type="button"
+                      :class="{ active: i === galleryIndex }"
+                      :aria-label="`Show image ${i + 1}`"
+                      @click="showImage(i)"
+                    ></button>
+                  </div>
+                </template>
+              </div>
+            </div>
+
             <article v-if="chainBody" class="post-body" v-html="chainBody"></article>
 
             <section v-if="serveyCopy" class="db-copy">
@@ -460,6 +500,7 @@ export default {
       arweave: { state: 'unknown', confirmed: {} },
       fromOperation: false,
       permTip: { show: false, x: 0, y: 0 },
+      galleryIndex: 0,
     }
   },
 
@@ -537,7 +578,7 @@ export default {
     */
     textRemoved() {
       if (this.isComment || !this.post.id) return false
-      return !this.displayTitle && !this.chainBody && !this.serveyCopy && !this.postVideos.length
+      return !this.displayTitle && !this.chainBody && !this.serveyCopy && !this.postVideos.length && !this.postImages.length
     },
 
     displayTitle() {
@@ -587,6 +628,29 @@ export default {
     videoPoster() {
       const list = (this.postDetail && this.postDetail.image_url) || []
       return list.find(url => typeof url === 'string' && url.trim()) || ''
+    },
+
+    /*
+    | A gallery post, like a video post, keeps its pictures out of the HTML:
+    | the API files them under `image_url` and the description is only the
+    | caption. For an article the same field holds a re-hosted copy of its
+    | cover, already printed inline under another URL, so it is shown only
+    | when the body carries no images of its own. The chain's `arweave`
+    | block lists the same files and stands in when the API is unreachable.
+    */
+    postImages() {
+      if (this.postVideos.length) return []
+      if (/<img\b/i.test(this.chainBody + this.serveyCopy)) return []
+
+      const fromApi = (this.postDetail && this.postDetail.image_url) || []
+      const fromChain = this.permanence.media.map(m => m.url).filter(url => this.isImage(url))
+      const seen = new Set()
+      return [...fromApi, ...fromChain].filter((url) => {
+        if (typeof url !== 'string' || !url.trim() || seen.has(url)) return false
+        seen.add(url)
+        // Serey's stand-in cover for a post with no picture at all.
+        return !/\/thumbnails\/thumbnail\.png$/i.test(url)
+      })
     },
 
     serveyCopy() {
@@ -777,6 +841,20 @@ export default {
       this.hashTip.show = false
     },
 
+    showImage(i) {
+      this.galleryIndex = Math.max(0, Math.min(this.postImages.length - 1, i))
+    },
+    onGalleryTouchStart(e) {
+      this._galleryTouchX = e.changedTouches[0].clientX
+    },
+    // A horizontal swipe of more than 40px turns the page, like the feed.
+    onGalleryTouchEnd(e) {
+      if (this._galleryTouchX == null) return
+      const dx = e.changedTouches[0].clientX - this._galleryTouchX
+      this._galleryTouchX = null
+      if (Math.abs(dx) > 40) this.showImage(this.galleryIndex + (dx < 0 ? 1 : -1))
+    },
+
     sharePost() {
       if (navigator.share) {
         navigator.share({ title: this.displayTitle || 'Serey Post', url: window.location.href })
@@ -826,6 +904,7 @@ export default {
       this.loadFailed = false
       this.readProgress = 0
       this.authorAvatar = ''
+      this.galleryIndex = 0
 
       try {
         await this.loadPost(author, permlink)
@@ -1601,6 +1680,81 @@ export default {
   background: #0b1220;
 }
 
+/* Gallery posts — full card width, under the title */
+.post-gallery { margin-bottom: 1.1rem; }
+
+.gallery-stage {
+  position: relative;
+  background: #0b1220;
+  overflow: hidden;
+}
+
+.gallery-slide { display: block; }
+
+.gallery-slide img {
+  display: block;
+  width: 100%;
+  max-height: 72vh;
+  object-fit: contain;
+}
+
+/* Several pictures share one frame so the caption does not jump between them */
+.gallery-stage.multi .gallery-slide img { height: min(72vh, 560px); }
+
+.gallery-count {
+  position: absolute;
+  top: .75rem;
+  right: .75rem;
+  padding: .2rem .55rem;
+  border-radius: 999px;
+  background: rgba(11,18,32,.72);
+  color: #fff;
+  font: 600 .78rem 'Outfit', sans-serif;
+  pointer-events: none;
+}
+
+.gallery-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255,255,255,.92);
+  color: #0e0e52;
+  box-shadow: 0 2px 10px rgba(0,0,0,.25);
+  cursor: pointer;
+  transition: opacity .15s, transform .15s;
+}
+.gallery-nav svg { width: 18px; height: 18px; }
+.gallery-nav.prev { left: .75rem; }
+.gallery-nav.next { right: .75rem; }
+.gallery-nav:hover:not(:disabled) { transform: translateY(-50%) scale(1.06); }
+.gallery-nav:disabled { opacity: 0; pointer-events: none; }
+
+.gallery-dots {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: .7rem;
+  display: flex;
+  justify-content: center;
+  gap: .4rem;
+}
+.gallery-dots button {
+  width: 7px;
+  height: 7px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255,255,255,.5);
+  cursor: pointer;
+}
+.gallery-dots button.active { background: #fff; }
+
 /* What the chain stores */
 .db-copy {
   padding-top: 1.5rem;
@@ -2014,6 +2168,8 @@ export default {
   .post-title { font-size: 1.45rem; }
   .post-hero  { padding: .9rem .9rem .75rem; }
   .post-body  { padding: .5rem .9rem 1.25rem; font-size: .95rem; line-height: 1.75; }
+  .gallery-stage.multi .gallery-slide img { height: min(60vh, 420px); }
+  .gallery-nav { width: 32px; height: 32px; }
 
   /* Tighter passport bar */
   .pb-brand  { padding: .5rem .75rem; }
