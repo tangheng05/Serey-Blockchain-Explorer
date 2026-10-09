@@ -543,9 +543,9 @@ export default {
     displayTitle() {
       const title = (this.post.title || '').trim()
       if (this.chainRecord.hashOnly && /^serey$/i.test(title)) {
-        return (this.postDetail && this.postDetail.title) || ''
+        return this.plainText(this.postDetail && this.postDetail.title)
       }
-      return title
+      return this.plainText(title)
     },
 
     shortHash() {
@@ -719,6 +719,15 @@ export default {
       this._arweaveTimer = null
     },
 
+    // Some clients store the title as editor HTML (`<p>…</p>`); a headline is
+    // text, so drop the tags and decode entities. DOMParser runs no scripts.
+    plainText(html) {
+      const value = String(html || '')
+      if (!/[<&]/.test(value)) return value.trim()
+      const doc = new DOMParser().parseFromString(value, 'text/html')
+      return (doc.body.textContent || '').replace(/\s+/g, ' ').trim()
+    },
+
     // Editors leave `<p><br></p>` / `<p>&nbsp;</p>` at the end of a post;
     // each one renders as a blank line under the last real block.
     trimTrailingBlanks(html) {
@@ -770,7 +779,7 @@ export default {
 
     sharePost() {
       if (navigator.share) {
-        navigator.share({ title: this.post?.title || 'Serey Post', url: window.location.href })
+        navigator.share({ title: this.displayTitle || 'Serey Post', url: window.location.href })
       } else {
         navigator.clipboard.writeText(window.location.href)
       }
