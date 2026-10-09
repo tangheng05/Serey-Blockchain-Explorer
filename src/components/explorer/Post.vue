@@ -204,8 +204,8 @@
             :initial="{ opacity: 0, y: 20 }"
             :enter="{ opacity: 1, y: 0, transition: { type: 'spring', stiffness: 260, damping: 24, delay: 100 } }"
           >
-            <header v-if="isComment || displayTitle || textRemoved" class="post-hero">
-              <h1 v-if="!isComment && displayTitle" class="post-title">{{ displayTitle }}</h1>
+            <header v-if="isComment || headline || textRemoved" class="post-hero">
+              <h1 v-if="!isComment && headline" class="post-title">{{ headline }}</h1>
               <template v-else-if="isComment">
                 <h1 class="post-title">Comment</h1>
                 <div class="comment-breadcrumbs">
@@ -587,6 +587,21 @@ export default {
         return this.plainText(this.postDetail && this.postDetail.title)
       }
       return this.plainText(title)
+    },
+
+    /*
+    | A gallery or video post has no title of its own: Serey fills the field
+    | with the caption (or its opening), so printing both shows the same
+    | words twice. The feed shows only the caption under the media; so does
+    | this page. Articles keep their headline whatever their first line says.
+    */
+    headline() {
+      const title = this.displayTitle
+      if (!title || !(this.postImages.length || this.postVideos.length)) return title
+      const letters = s => s.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '')
+      const caption = letters(this.plainText(this.chainBody || this.serveyCopy))
+      const head = letters(title)
+      return head && caption.startsWith(head) ? '' : title
     },
 
     shortHash() {
@@ -1759,6 +1774,11 @@ export default {
 .db-copy {
   padding-top: 1.5rem;
   border-top: 1px solid #eef2f7;
+}
+/* Straight under the pictures it is the caption, with nothing to set it apart from */
+.post-gallery + .db-copy {
+  padding-top: 0;
+  border-top: none;
 }
 
 /* Permanent copies */
