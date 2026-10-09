@@ -1,3 +1,4 @@
+import '@/utils/fetchShim.js'
 import 'regenerator-runtime/runtime'
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
