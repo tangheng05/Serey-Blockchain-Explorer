@@ -7,7 +7,11 @@
 
     <!-- Loading skeleton -->
     <Transition name="fade-out" mode="out-in">
-      <div v-if="!exists" class="skeleton-layout" key="skeleton">
+      <div v-if="!exists && loadFailed" class="load-failed" key="failed">
+        <p>This post could not be loaded. Check your connection and try again.</p>
+        <button type="button" class="load-failed-btn" @click="fetchData">Retry</button>
+      </div>
+      <div v-else-if="!exists" class="skeleton-layout" key="skeleton">
         <div class="skeleton-sidebar">
           <div class="skeleton-card tall"></div>
           <div class="skeleton-card medium"></div>
@@ -443,6 +447,7 @@ export default {
       payout: { total: '', card: {} },
       sereyPrice: null,
       exists: false,
+      loadFailed: false,
       showRaw: false,
       readProgress: 0,
       authorAvatar: '',
@@ -612,8 +617,10 @@ export default {
 
   watch: { '$route': 'fetchData' },
 
-  async created() {
-    await this.getChainProperties()
+  created() {
+    // Chain properties are not needed to show a post; never let a slow or
+    // failing call hold the page on the skeleton.
+    this.getChainProperties().catch(() => { /* */ })
     this.fetchData()
   },
 
@@ -807,11 +814,21 @@ export default {
       const author = this.$route.params.account
       const permlink = this.$route.params.permlink
       this.exists = false
+      this.loadFailed = false
       this.readProgress = 0
       this.authorAvatar = ''
 
+      try {
+        await this.loadPost(author, permlink)
+      } catch (e) {
+        console.error('Post load failed', e)
+        this.loadFailed = true
+      }
+    },
+
+    async loadPost(author, permlink) {
       const [postDetailRes, result] = await Promise.allSettled([
-        axios.get(`https://global-api.serey.io/api/v1/sereyweb/getDetailByPermlink?permlink=${permlink}&authorName=${author}`),
+        axios.get(`https://global-api.serey.io/api/v1/sereyweb/getDetailByPermlink?permlink=${permlink}&authorName=${author}`, { timeout: 10000 }),
         this.steem_database_call('get_content', [author, permlink]),
       ])
 
@@ -823,7 +840,10 @@ export default {
         this.apiAvailable = Boolean(this.postDetail)
       }
 
-      if (result.status !== 'fulfilled') return
+      if (result.status !== 'fulfilled') {
+        this.loadFailed = true
+        return
+      }
       const post = result.value
       this.post = post
 
@@ -859,12 +879,13 @@ export default {
       }
       this.payoutCard()
 
+      // Show the post now; the price only decorates it and fills in later.
+      this.exists = true
+
       try {
-        const priceRes = await axios.get('https://global-api.serey.io/api/v1/general/get_serey_price')
+        const priceRes = await axios.get('https://global-api.serey.io/api/v1/general/get_serey_price', { timeout: 10000 })
         this.sereyPrice = priceRes.data.price
       } catch (e) { /* */ }
-
-      this.exists = true
     },
 
     payoutCard() {
@@ -938,6 +959,16 @@ export default {
   min-height: 100vh;
   font-family: 'Outfit', sans-serif;
   overflow-x: hidden;
+}
+
+.load-failed { padding: 3rem 1rem; text-align: center; }
+.load-failed-btn {
+  margin-top: 0.75rem;
+  padding: 0.5rem 1.5rem;
+  border: 0;
+  border-radius: 999px;
+  background: #0d0f5c;
+  color: #fff;
 }
 
 /* ── Skeleton loading ── */
