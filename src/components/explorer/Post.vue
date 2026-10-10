@@ -80,12 +80,12 @@
                 <span v-else class="pb-chip unknown">Not recorded</span>
               </div>
               <div class="pb-dot">·</div>
-              <div v-if="permanence.has" class="pb-field pb-perm-tip" @mouseenter="showPermTooltip" @mouseleave="hidePermTooltip">
+              <div v-if="permanence.has || foreverPending" class="pb-field pb-perm-tip" @mouseenter="showPermTooltip" @mouseleave="hidePermTooltip">
                 <span class="pb-key">Storage</span>
                 <button v-if="archiving" type="button" class="pb-chip archiving" @click="scrollToPermanence"><span class="pulse-dot"></span>Archiving</button>
                 <button v-else type="button" class="pb-chip permanent" @click="scrollToPermanence">∞ Permanent</button>
               </div>
-              <div v-if="permanence.has" class="pb-dot">·</div>
+              <div v-if="permanence.has || foreverPending" class="pb-dot">·</div>
               <div class="pb-field">
                 <span class="pb-key">TX</span>
                 <span class="pb-val mono">#{{ post.id }}</span>
@@ -302,7 +302,7 @@
             </section>
           </template>
 
-          <template v-if="permanence.has">
+          <template v-if="permanence.has || foreverPending">
             <div class="post-divider"></div>
             <section
               ref="permSection"
@@ -316,11 +316,14 @@
                 <span v-if="archiving" class="perm-status archiving"><span class="pulse-dot"></span>Archiving</span>
                 <span v-else-if="arweave.state === 'permanent'" class="perm-status confirmed">✓ Confirmed</span>
               </h3>
-              <p v-if="archiving" class="perm-lede">
+              <p v-if="foreverPending" class="perm-lede">
+                Serey is copying this post's text and files to Arweave. Once every copy is accepted, the post is re-recorded on the chain with their IDs and they appear here. The page checks again automatically.
+              </p>
+              <p v-else-if="archiving" class="perm-lede">
                 Uploaded and waiting for the Arweave network to confirm. This usually takes a few minutes; the page checks again automatically.
               </p>
 
-              <div class="perm-list">
+              <div v-if="permanence.has" class="perm-list">
                 <div v-if="permanence.text" class="perm-row">
                   <div class="perm-icon">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -398,7 +401,7 @@
                 </div>
               </div>
 
-              <p class="perm-note">
+              <p v-if="permanence.has" class="perm-note">
                 A matching fingerprint means the Arweave copy is identical to what was published. Click one to copy it.
               </p>
             </section>
@@ -480,6 +483,7 @@ export default {
     return {
       post: {},
       postDetail: null,
+      forever: null,
       apiReplies: [],
       apiAvailable: false,
       commentCount: 0,
@@ -678,7 +682,12 @@ export default {
     },
 
     archiving() {
-      return this.permanence.has && this.arweave.state === 'archiving'
+      return (this.permanence.has && this.arweave.state === 'archiving') || this.foreverPending
+    },
+
+    // Serey has a Forever request but the chain edit carrying the ids has not landed yet.
+    foreverPending() {
+      return !this.permanence.has && Boolean(this.forever) && this.forever.status !== 'failed'
     },
 
     permanence() {
@@ -710,6 +719,7 @@ export default {
   beforeUnmount() {
     window.removeEventListener('scroll', this.onScroll)
     this.stopArweaveCheck()
+    this.stopForeverPoll()
   },
 
   methods: {
@@ -796,6 +806,42 @@ export default {
     stopArweaveCheck() {
       clearTimeout(this._arweaveTimer)
       this._arweaveTimer = null
+    },
+    async pollForever(author, permlink) {
+      let res
+      try {
+        res = await this.fetchDetail(author, permlink)
+      } catch (e) {
+        this.scheduleForeverPoll(author, permlink)
+        return
+      }
+      if (this.$route.params.account !== author || this.$route.params.permlink !== permlink) return
+      this.forever = res.data.forever || null
+      if (!this.forever || this.forever.status === 'failed') return
+
+      if (this.forever.status === 'published') {
+        try {
+          const fresh = await this.steem_database_call('get_content', [author, permlink])
+          this.post = { ...this.post, title: fresh.title, body: fresh.body, json_metadata: fresh.json_metadata }
+          if (!this.contentServed) await this.fillFromOperation(author, permlink)
+        } catch (e) { /* */ }
+        if (this.permanence.has) {
+          this.checkArweave()
+          return
+        }
+        // A chain edit that failed never lands; stop asking after ~10 minutes.
+        this._foreverChainTries = (this._foreverChainTries || 0) + 1
+        if (this._foreverChainTries > 10) return
+      }
+      this.scheduleForeverPoll(author, permlink)
+    },
+    scheduleForeverPoll(author, permlink) {
+      this._foreverTimer = setTimeout(() => this.pollForever(author, permlink), 60000)
+    },
+    stopForeverPoll() {
+      clearTimeout(this._foreverTimer)
+      this._foreverTimer = null
+      this._foreverChainTries = 0
     },
 
     // Some clients store the title as editor HTML (`<p>…</p>`); a headline is
@@ -929,16 +975,23 @@ export default {
       }
     },
 
+    fetchDetail(author, permlink) {
+      return axios.get(`https://global-api.serey.io/api/v1/sereyweb/getDetailByPermlink?permlink=${permlink}&authorName=${author}`, { timeout: 10000 })
+    },
+
     async loadPost(author, permlink) {
+      this.stopForeverPoll()
       const [postDetailRes, result] = await Promise.allSettled([
-        axios.get(`https://global-api.serey.io/api/v1/sereyweb/getDetailByPermlink?permlink=${permlink}&authorName=${author}`, { timeout: 10000 }),
+        this.fetchDetail(author, permlink),
         this.steem_database_call('get_content', [author, permlink]),
       ])
 
       this.apiReplies = []
       this.apiAvailable = false
+      this.forever = null
       if (postDetailRes.status === 'fulfilled') {
         this.postDetail = postDetailRes.value.data.content
+        this.forever = postDetailRes.value.data.forever || null
         this.apiReplies = postDetailRes.value.data.replies || []
         this.apiAvailable = Boolean(this.postDetail)
       }
@@ -962,6 +1015,7 @@ export default {
       this.stopArweaveCheck()
       this.arweave = { state: 'unknown', confirmed: {} }
       this.checkArweave()
+      if (this.foreverPending) this.scheduleForeverPoll(author, permlink)
 
       const no_keys = ['body', 'json_metadata', 'beneficiaries', 'active_votes', 'replies', 'body_length', 'reblogged_by']
       const pst = {}
