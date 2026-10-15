@@ -440,9 +440,6 @@
                 </div>
               </div>
 
-              <p class="perm-note">
-                A content ID is an address made from the file's own bytes: it encodes the file's BLAKE3 hash. Hash a copy of the file and compare. A match means it is the file Serey stored. Click one to copy it, or open it on cid.serey.io to check the file in your browser.
-              </p>
             </section>
           </template>
 
