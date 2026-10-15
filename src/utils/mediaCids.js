@@ -1,12 +1,6 @@
-/*
-| The rows of a post's "Content IDs" section: one per file CID, and one more
-| for a video's poster frame.
-|
-| `media` is what GET /api/v2/media-proof answers for the post. `urls` are the
-| file addresses the page already knows, used only to link a row to its file.
-| `shown` are CIDs the page prints elsewhere (a Forever post's own `s5` ids),
-| so the same ID is never listed twice.
-*/
+// Rows of the "Content IDs" section: one per file CID, plus a video's poster.
+// `urls` only link a row to its file; `shown` are CIDs printed elsewhere, so
+// none appears twice.
 export function cidRows(media, { urls = [], shown = [] } = {}) {
   const skip = new Set(shown.filter(Boolean))
   const isUrl = (u) => typeof u === 'string' && /^https?:\/\//i.test(u)

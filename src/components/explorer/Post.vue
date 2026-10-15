@@ -788,12 +788,8 @@ export default {
       return [...(d.image_url || []), ...(d.videos || []), ...this.permanence.media.map(m => m.url)]
     },
 
-    /*
-    | The Content IDs section: the S5 id of each file, as Serey's storage
-    | reports it now. The chain does not carry these for an ordinary post. A
-    | Forever post already lists its files' `s5` ids under Permanent copies, so
-    | those are left out here rather than printed twice.
-    */
+    // Not on the chain for an ordinary post. A Forever post's `s5` ids are
+    // already under Permanent copies, so they are left out here.
     mediaCids() {
       return cidRows(this.mediaProof, {
         urls: this.mediaUrls,
@@ -987,20 +983,15 @@ export default {
       const noun = { images: 'Image', videos: 'Video', audio: 'Audio' }[row.kind] || 'File'
       return `${noun} attached to the post`
     },
-    /*
-    | The S5 id of each file the post shows, from Serey's API.
-    |
-    | Fire-and-forget: the post renders without it, and every failure (an API
-    | older than this route, a post the API will not describe, storage down)
-    | simply leaves the section out. Nothing here is on the chain.
-    */
+    // Fire-and-forget: any failure (older API, 404, storage down) just leaves
+    // the section out.
     async loadMediaProof(author, permlink) {
       try {
         const res = await axios.get(
           `https://global-api.serey.io/api/v2/media-proof/posts/${encodeURIComponent(author)}/${encodeURIComponent(permlink)}`,
           { timeout: 10000 },
         )
-        // The reader may have moved on to another post while this was in flight.
+        // The reader may have moved to another post meanwhile.
         if (this.$route.params.account !== author || this.$route.params.permlink !== permlink) return
         this.mediaProof = Array.isArray(res.data && res.data.media) ? res.data.media : []
       } catch (e) { /* the section stays out */ }
