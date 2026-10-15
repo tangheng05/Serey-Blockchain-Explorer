@@ -156,7 +156,7 @@
           >
             <div class="author-avatar" :style="authorAvatarStyle"></div>
             <router-link :to="EXPLORER + '@' + post.author" class="author-handle">@{{ post.author }}</router-link>
-            <a :href="`https://serey.io/authors/${post.author}/${post.permlink}`" target="_blank" rel="noopener" class="btn-serey">
+            <a :href="serreyLink" target="_blank" rel="noopener" class="btn-serey">
               <span>View on Serey.io ↗</span>
             </a>
           </div>
@@ -183,7 +183,7 @@
             :initial="{ opacity: 0, x: -28 }"
             :enter="{ opacity: 1, x: 0, transition: { type: 'spring', stiffness: 280, damping: 22, delay: 280 } }"
           >
-            <div class="meta-eyebrow">{{ post.depth === 0 ? 'Post Info' : 'Comment Info' }}</div>
+            <div class="meta-eyebrow">{{ podcast ? 'Episode Info' : post.depth === 0 ? 'Post Info' : 'Comment Info' }}</div>
             <div class="meta-line"><span>Category</span><strong>{{ post.parent_permlink }}</strong></div>
             <div class="meta-line"><span>ID</span><strong>#{{ post.id }}</strong></div>
             <div class="meta-line"><span>Published</span><strong>{{ formatDate(post.created) }}</strong></div>
@@ -230,6 +230,10 @@
                 playsinline
                 preload="metadata"
               ></video>
+            </div>
+
+            <div v-if="podcast && podcast.audio" class="post-media post-media--audio">
+              <audio class="post-audio" :src="podcast.audio" controls preload="metadata"></audio>
             </div>
 
             <div v-if="postImages.length" class="post-gallery">
@@ -505,6 +509,9 @@ export default {
       fromOperation: false,
       permTip: { show: false, x: 0, y: 0 },
       galleryIndex: 0,
+      // A podcast episode: Serey's episode row (audio or video file, cover, words) and
+      // the episode's page on its show.
+      podcast: null,
     }
   },
 
@@ -570,7 +577,20 @@ export default {
     // "this is a reply" pointed Root Post at @undefined the moment a post
     // had no text left to show.
     isComment() {
-      return Number(this.post.depth) > 0
+      return Number(this.post.depth) > 0 && !this.podcast
+    },
+
+    // Episodes carry { podcast: { id, community_id } } in their chain metadata.
+    podcastRef() {
+      let meta = {}
+      try { meta = JSON.parse(this.post.json_metadata || '{}') } catch (e) { /* */ }
+      const ref = meta && meta.podcast
+      return ref && ref.id ? ref : null
+    },
+
+    serreyLink() {
+      if (this.podcast) return this.podcast.link
+      return `https://serey.io/authors/${this.post.author}/${this.post.permlink}`
     },
 
     /*
@@ -975,6 +995,50 @@ export default {
       }
     },
 
+    /*
+    | Serey's copy of a podcast episode, shaped like a post's API copy so the page
+    | renders it the same way: title, description, cover, and the uploaded file
+    | (video in the player, audio in its own player). A members-only episode comes
+    | without its file, so it shows the words only.
+    */
+    async loadPodcast(ref) {
+      try {
+        const res = await axios.get(`https://global-api.serey.io/api/v2/podcast/get-by-id/${encodeURIComponent(ref.id)}`, { timeout: 10000 })
+        const ep = res.data && res.data.podcast
+        if (!ep) return
+        const escape = (t) => String(t || '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))
+        const file = ep.content_url || ''
+        this.postDetail = {
+          title: ep.title || '',
+          description: escape(ep.description).replace(/\n/g, '<br />'),
+          videos: ep.content_type === 'video' && file ? [file] : [],
+          image_url: ep.thumbnail_url ? [ep.thumbnail_url] : [],
+        }
+        this.apiAvailable = true
+        this.podcast = {
+          id: ep.id,
+          audio: ep.content_type === 'audio' ? file : '',
+          link: 'https://serey.io/podcast',
+        }
+        this.podcastShowLink(ep.community_id, ep.id)
+      } catch (e) {
+        // The chain record still shows; only Serey's copy is missing.
+      }
+    },
+
+    // The episode on its own show's page; the global podcast page until the show is found.
+    async podcastShowLink(communityId, episodeId) {
+      try {
+        const res = await axios.get('https://global-api.serey.io/api/v2/general/get-communities', { timeout: 10000 })
+        const all = []
+        const walk = (list) => (list || []).forEach((c) => { all.push(c); walk(c.child_communities) })
+        walk(res.data && res.data.globals)
+        walk(res.data && res.data.locals)
+        const show = all.find((c) => Number(c.id) === Number(communityId))
+        if (show && show.dns && this.podcast) this.podcast = { ...this.podcast, link: `https://${show.dns}/podcast?episode=${episodeId}` }
+      } catch (e) { /* keeps the global link */ }
+    },
+
     fetchDetail(author, permlink) {
       return axios.get(`https://global-api.serey.io/api/v1/sereyweb/getDetailByPermlink?permlink=${permlink}&authorName=${author}`, { timeout: 10000 })
     },
@@ -1011,6 +1075,10 @@ export default {
       // intact. The operation itself is the chain record, so read that
       // instead rather than reporting nothing.
       if (!this.contentServed) await this.fillFromOperation(author, permlink)
+
+      // A podcast episode is not a blog post, so the post lookup finds nothing: read the episode.
+      this.podcast = null
+      if (!this.apiAvailable && this.podcastRef) await this.loadPodcast(this.podcastRef)
 
       this.stopArweaveCheck()
       this.arweave = { state: 'unknown', confirmed: {} }
@@ -1739,6 +1807,15 @@ export default {
   flex-direction: column;
   gap: 1rem;
   margin-bottom: 1.35rem;
+}
+
+.post-media--audio {
+  padding: 4px 0 8px;
+}
+
+.post-audio {
+  display: block;
+  width: 100%;
 }
 
 .post-video {
