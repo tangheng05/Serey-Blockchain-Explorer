@@ -382,10 +382,16 @@
                       </button>
                     </template>
                   </div>
-                  <a class="perm-open" :href="arweaveUrl(file.ar)" target="_blank" rel="noopener noreferrer">
-                    View on Arweave
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M9 7h8v8" /></svg>
-                  </a>
+                  <div class="perm-actions">
+                    <a class="perm-open" :href="arweaveUrl(file.ar)" target="_blank" rel="noopener noreferrer">
+                      View on Arweave
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M9 7h8v8" /></svg>
+                    </a>
+                    <a v-if="file.s5" class="cid-verify" :href="cidExplorerUrl(file.s5)" target="_blank" rel="noopener noreferrer">
+                      Verify on cid.serey.io
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M9 7h8v8" /></svg>
+                    </a>
+                  </div>
                 </div>
               </div>
 
@@ -2145,6 +2151,27 @@ export default {
 .cid-open { background: #192bc2; }
 .cid-open:hover { background: #121f94; }
 
+/* The Arweave copy is the main action; checking the S5 copy is the quieter second one. */
+.perm-actions { display: flex; flex-direction: column; align-items: stretch; gap: .35rem; }
+.cid-verify {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .3rem;
+  padding: .3rem .7rem;
+  border: 1px solid #c8d0f5;
+  border-radius: 8px;
+  color: #192bc2;
+  font-family: 'Outfit', sans-serif;
+  font-size: .72rem;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background .15s ease, border-color .15s ease;
+}
+.cid-verify:hover { background: #eef1ff; border-color: #192bc2; color: #192bc2; text-decoration: none; }
+.cid-verify svg { width: 12px; height: 12px; }
+
 @media (max-width: 720px) {
   .perm-row {
     grid-template-columns: auto minmax(0, 1fr);
@@ -2158,6 +2185,7 @@ export default {
   .perm-what { grid-area: what; }
   .perm-hash { grid-area: hash; }
   .perm-open { grid-area: open; justify-content: center; }
+  .perm-actions { grid-area: open; }
 }
 
 /* Hash tooltip */
