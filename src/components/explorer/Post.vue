@@ -329,12 +329,7 @@
 
               <div v-if="permanence.has" class="perm-list">
                 <div v-if="permanence.text" class="perm-row">
-                  <div class="perm-icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                      <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" />
-                      <path d="M14 3v5h5M9 13h6M9 17h6" />
-                    </svg>
-                  </div>
+                  <media-thumb kind="text" />
                   <div class="perm-what">
                     <span class="perm-name">
                       Post text
@@ -363,25 +358,14 @@
                   </a>
                 </div>
 
-                <div v-for="file in permanence.media" :key="file.ar" class="perm-row">
-                  <div class="perm-icon">
-                    <svg v-if="isImage(file.url)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                      <rect x="3" y="4" width="18" height="16" rx="2" />
-                      <circle cx="9" cy="10" r="1.6" />
-                      <path d="m21 16-5-5-8 8" />
-                    </svg>
-                    <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                      <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" />
-                      <path d="M14 3v5h5" />
-                    </svg>
-                  </div>
+                <div v-for="file in foreverFiles" :key="file.ar" class="perm-row">
+                  <media-thumb :src="file.thumb" :kind="file.visual" :href="file.url" :title="fileName(file.url)" />
                   <div class="perm-what">
                     <span class="perm-name">
-                      <a v-if="file.url" class="link" :href="file.url" target="_blank" rel="noopener noreferrer" :title="fileName(file.url)">{{ fileName(file.url) }}</a>
-                      <template v-else>Attached file</template>
+                      {{ file.label }}
                       <span v-if="arweave.state !== 'unknown'" class="perm-state" :class="arweave.confirmed[file.ar] ? 'ok' : 'pending'">{{ arweave.confirmed[file.ar] ? 'Confirmed' : 'Pending' }}</span>
                     </span>
-                    <span class="perm-sub">{{ isImage(file.url) ? 'Image' : 'File' }} attached to the post</span>
+                    <span class="perm-sub">Attached to the post</span>
                   </div>
                   <div class="perm-hash">
                     <template v-if="file.s5">
@@ -424,27 +408,9 @@
 
               <div class="perm-list">
                 <div v-for="row in mediaCids" :key="row.key" class="perm-row cid-row">
-                  <div class="perm-icon">
-                    <svg v-if="row.kind === 'videos' && row.role === 'file'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                      <rect x="3" y="5" width="18" height="14" rx="2" />
-                      <path d="m10 9.5 5 2.5-5 2.5z" />
-                    </svg>
-                    <svg v-else-if="row.kind === 'audio'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                      <path d="M9 18V6l10-2v12" />
-                      <circle cx="6.5" cy="18" r="2.5" />
-                      <circle cx="16.5" cy="16" r="2.5" />
-                    </svg>
-                    <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                      <rect x="3" y="4" width="18" height="16" rx="2" />
-                      <circle cx="9" cy="10" r="1.6" />
-                      <path d="m21 16-5-5-8 8" />
-                    </svg>
-                  </div>
+                  <media-thumb :src="row.thumb" :kind="row.visual" :href="row.url" :title="row.file" />
                   <div class="perm-what">
-                    <span class="perm-name">
-                      <a v-if="row.url" class="link" :href="row.url" target="_blank" rel="noopener noreferrer" :title="row.file">{{ row.file }}</a>
-                      <template v-else>{{ row.file }}</template>
-                    </span>
+                    <span class="perm-name">{{ row.label }}</span>
                     <span class="perm-sub">{{ cidRowLabel(row) }}</span>
                   </div>
                   <div class="perm-hash">
@@ -528,12 +494,13 @@ import Beneficiaries from '@/components/explorer/Beneficiaries'
 import { useChainProperties } from '@/composables/useChainProperties.js'
 import { useRPCNode } from '@/composables/useRPCNode.js'
 import { useAlertsStore } from '@/stores/alerts.js'
-import { cidRows } from '@/utils/mediaCids.js'
+import MediaThumb from '@/components/explorer/MediaThumb'
+import { cidRows, describeMedia, numberLabels } from '@/utils/mediaCids.js'
 import axios from 'axios'
 
 export default {
   name: 'Post',
-  components: { AppHeader, CardData, Votes, Beneficiaries, PostComments },
+  components: { AppHeader, CardData, Votes, Beneficiaries, PostComments, MediaThumb },
 
   setup() {
     const chainProps = useChainProperties()
@@ -797,6 +764,11 @@ export default {
       })
     },
 
+    // Permanent copies of files, drawn like the Content IDs rows.
+    foreverFiles() {
+      return numberLabels(this.permanence.media.map(m => ({ ...m, ...describeMedia(m.url) })))
+    },
+
   },
 
   watch: { '$route': 'fetchData' },
@@ -979,9 +951,7 @@ export default {
       try { return decodeURIComponent(String(url).split('/').pop()) } catch (e) { return url }
     },
     cidRowLabel(row) {
-      if (row.role === 'poster') return 'Poster frame of the video'
-      const noun = { images: 'Image', videos: 'Video', audio: 'Audio' }[row.kind] || 'File'
-      return `${noun} attached to the post`
+      return row.role === 'poster' ? 'Poster frame of the video' : 'Attached to the post'
     },
     // Fire-and-forget: any failure (older API, 404, storage down) just leaves
     // the section out.
@@ -2067,18 +2037,6 @@ export default {
 }
 .perm-row + .perm-row { border-top: 1px solid #eef3f9; }
 
-.perm-icon {
-  display: grid;
-  place-items: center;
-  width: 38px;
-  height: 38px;
-  border-radius: 10px;
-  background: #f1ecfd;
-  color: #6d28d9;
-  flex-shrink: 0;
-}
-.perm-icon svg { width: 20px; height: 20px; }
-
 .perm-what {
   display: flex;
   flex-direction: column;
@@ -2194,7 +2152,7 @@ export default {
       "icon what"
       "hash hash";
   }
-  .perm-icon { grid-area: icon; }
+  .perm-row .mthumb { grid-area: icon; }
   .perm-what { grid-area: what; }
   .perm-hash { grid-area: hash; }
   .perm-open { grid-area: open; justify-content: center; }
