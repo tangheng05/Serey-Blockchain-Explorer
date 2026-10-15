@@ -401,7 +401,7 @@
             </section>
           </template>
 
-          <!-- Content IDs: the S5 address of each file, from Serey's storage -->
+          <!-- Proof of storage: the S5 content ID of each file, from Serey's storage -->
           <template v-if="mediaCids.length">
             <div class="post-divider"></div>
             <section
@@ -410,7 +410,8 @@
               :initial="{ opacity: 0, y: 18 }"
               :visible-once="{ opacity: 1, y: 0, transition: { type: 'spring', stiffness: 240, damping: 26 } }"
             >
-              <h3 class="section-hdg"><span class="accent-dot"></span> Content IDs</h3>
+              <h3 class="section-hdg"><span class="accent-dot"></span> Proof of storage</h3>
+              <p class="section-sub">Each file in this post has a unique ID on a decentralized network.</p>
 
               <div class="perm-list">
                 <div v-for="row in mediaCids" :key="row.key" class="perm-row">
@@ -2010,6 +2011,13 @@ export default {
 }
 .perm-status.archiving { background: #fff4d6; color: #9a5b00; border: 1px solid #f3d38a; }
 .perm-status.confirmed { background: #e8f7ee; color: #1f8a4c; border: 1px solid #b7e4c7; }
+
+.section-sub {
+  margin: -.4rem 0 1rem;
+  color: #6b84a3;
+  font-size: .86rem;
+  line-height: 1.55;
+}
 
 .perm-lede {
   margin: -.4rem 0 1rem;
