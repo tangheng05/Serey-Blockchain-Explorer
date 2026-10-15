@@ -411,6 +411,64 @@
             </section>
           </template>
 
+          <!-- Content IDs: the S5 address of each file, from Serey's storage -->
+          <template v-if="mediaCids.length">
+            <div class="post-divider"></div>
+            <section
+              class="perm-section"
+              v-motion
+              :initial="{ opacity: 0, y: 18 }"
+              :visible-once="{ opacity: 1, y: 0, transition: { type: 'spring', stiffness: 240, damping: 26 } }"
+            >
+              <h3 class="section-hdg"><span class="accent-dot"></span> Content IDs</h3>
+
+              <div class="perm-list">
+                <div v-for="row in mediaCids" :key="row.key" class="perm-row cid-row">
+                  <div class="perm-icon">
+                    <svg v-if="row.kind === 'videos' && row.role === 'file'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                      <rect x="3" y="5" width="18" height="14" rx="2" />
+                      <path d="m10 9.5 5 2.5-5 2.5z" />
+                    </svg>
+                    <svg v-else-if="row.kind === 'audio'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M9 18V6l10-2v12" />
+                      <circle cx="6.5" cy="18" r="2.5" />
+                      <circle cx="16.5" cy="16" r="2.5" />
+                    </svg>
+                    <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                      <rect x="3" y="4" width="18" height="16" rx="2" />
+                      <circle cx="9" cy="10" r="1.6" />
+                      <path d="m21 16-5-5-8 8" />
+                    </svg>
+                  </div>
+                  <div class="perm-what">
+                    <span class="perm-name">
+                      <a v-if="row.url" class="link" :href="row.url" target="_blank" rel="noopener noreferrer" :title="row.file">{{ row.file }}</a>
+                      <template v-else>{{ row.file }}</template>
+                    </span>
+                    <span class="perm-sub">{{ cidRowLabel(row) }}</span>
+                  </div>
+                  <div class="perm-hash">
+                    <span class="perm-hash-key">S5 content ID</span>
+                    <button
+                      type="button"
+                      class="perm-hash-val"
+                      :class="{ copied: copiedPerm === row.cid }"
+                      :title="row.cid"
+                      @click="copyPerm(row.cid)"
+                    >
+                      <code>{{ shortDigest(row.cid) }}</code>
+                      <span class="perm-copy">{{ copiedPerm === row.cid ? 'Copied' : 'Copy' }}</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <p class="perm-note">
+                A content ID is an address made from the file's own bytes: it encodes the file's BLAKE3 hash. Hash a copy of the file and compare. A match means it is the file Serey stored. Click one to copy it.
+              </p>
+            </section>
+          </template>
+
           <div class="post-divider"></div>
 
           <!-- Votes -->
@@ -470,6 +528,7 @@ import Beneficiaries from '@/components/explorer/Beneficiaries'
 import { useChainProperties } from '@/composables/useChainProperties.js'
 import { useRPCNode } from '@/composables/useRPCNode.js'
 import { useAlertsStore } from '@/stores/alerts.js'
+import { cidRows } from '@/utils/mediaCids.js'
 import axios from 'axios'
 
 export default {
@@ -488,6 +547,8 @@ export default {
       post: {},
       postDetail: null,
       forever: null,
+      // What Serey's storage reports for each file of the post: [{ kind, file, s5_cid, s5_thumb_cid }].
+      mediaProof: [],
       apiReplies: [],
       apiAvailable: false,
       commentCount: 0,
@@ -721,6 +782,25 @@ export default {
       return { has: Boolean(text || media.length), text, media }
     },
 
+    // Addresses the page already knows, so a Content IDs row can link to its file.
+    mediaUrls() {
+      const d = this.postDetail || {}
+      return [...(d.image_url || []), ...(d.videos || []), ...this.permanence.media.map(m => m.url)]
+    },
+
+    /*
+    | The Content IDs section: the S5 id of each file, as Serey's storage
+    | reports it now. The chain does not carry these for an ordinary post. A
+    | Forever post already lists its files' `s5` ids under Permanent copies, so
+    | those are left out here rather than printed twice.
+    */
+    mediaCids() {
+      return cidRows(this.mediaProof, {
+        urls: this.mediaUrls,
+        shown: this.permanence.media.map(m => m.s5),
+      })
+    },
+
   },
 
   watch: { '$route': 'fetchData' },
@@ -902,6 +982,29 @@ export default {
     fileName(url) {
       try { return decodeURIComponent(String(url).split('/').pop()) } catch (e) { return url }
     },
+    cidRowLabel(row) {
+      if (row.role === 'poster') return 'Poster frame of the video'
+      const noun = { images: 'Image', videos: 'Video', audio: 'Audio' }[row.kind] || 'File'
+      return `${noun} attached to the post`
+    },
+    /*
+    | The S5 id of each file the post shows, from Serey's API.
+    |
+    | Fire-and-forget: the post renders without it, and every failure (an API
+    | older than this route, a post the API will not describe, storage down)
+    | simply leaves the section out. Nothing here is on the chain.
+    */
+    async loadMediaProof(author, permlink) {
+      try {
+        const res = await axios.get(
+          `https://global-api.serey.io/api/v2/media-proof/posts/${encodeURIComponent(author)}/${encodeURIComponent(permlink)}`,
+          { timeout: 10000 },
+        )
+        // The reader may have moved on to another post while this was in flight.
+        if (this.$route.params.account !== author || this.$route.params.permlink !== permlink) return
+        this.mediaProof = Array.isArray(res.data && res.data.media) ? res.data.media : []
+      } catch (e) { /* the section stays out */ }
+    },
     showPermTooltip(e) {
       const rect = e.currentTarget.getBoundingClientRect()
       this.permTip = { show: true, x: rect.left + rect.width / 2, y: rect.bottom + 10 }
@@ -1053,6 +1156,7 @@ export default {
       this.apiReplies = []
       this.apiAvailable = false
       this.forever = null
+      this.mediaProof = []
       if (postDetailRes.status === 'fulfilled') {
         this.postDetail = postDetailRes.value.data.content
         this.forever = postDetailRes.value.data.forever || null
@@ -1106,6 +1210,7 @@ export default {
 
       // Show the post now; the price only decorates it and fills in later.
       this.exists = true
+      if (!this.isComment) this.loadMediaProof(author, permlink)
 
       try {
         const priceRes = await axios.get('https://global-api.serey.io/api/v1/general/get_serey_price', { timeout: 10000 })
@@ -2081,6 +2186,9 @@ export default {
   line-height: 1.55;
 }
 
+/* A Content IDs row has no "open" link, so it is one column short. */
+.cid-row { grid-template-columns: auto minmax(11rem, 1fr) minmax(0, 1.4fr); }
+
 @media (max-width: 720px) {
   .perm-row {
     grid-template-columns: auto minmax(0, 1fr);
@@ -2089,6 +2197,11 @@ export default {
       "hash hash"
       "open open";
     gap: .6rem .8rem;
+  }
+  .cid-row {
+    grid-template-areas:
+      "icon what"
+      "hash hash";
   }
   .perm-icon { grid-area: icon; }
   .perm-what { grid-area: what; }
