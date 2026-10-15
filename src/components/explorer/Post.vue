@@ -440,6 +440,9 @@
                 </div>
               </div>
 
+              <p class="perm-note">
+                Content IDs are unique fingerprints of the files in this post, stored on a decentralized network. Copy an ID to find or check the file anytime, even outside Serey.
+              </p>
             </section>
           </template>
 
