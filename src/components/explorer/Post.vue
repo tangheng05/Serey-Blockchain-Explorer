@@ -407,7 +407,7 @@
               <h3 class="section-hdg"><span class="accent-dot"></span> Content IDs</h3>
 
               <div class="perm-list">
-                <div v-for="row in mediaCids" :key="row.key" class="perm-row cid-row">
+                <div v-for="row in mediaCids" :key="row.key" class="perm-row">
                   <media-thumb :src="row.thumb" :kind="row.visual" :href="row.url" :title="row.file" />
                   <div class="perm-what">
                     <span class="perm-name">{{ row.label }}</span>
@@ -426,11 +426,15 @@
                       <span class="perm-copy">{{ copiedPerm === row.cid ? 'Copied' : 'Copy' }}</span>
                     </button>
                   </div>
+                  <a class="perm-open cid-open" :href="cidExplorerUrl(row.cid)" target="_blank" rel="noopener noreferrer">
+                    View on cid.serey.io
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M9 7h8v8" /></svg>
+                  </a>
                 </div>
               </div>
 
               <p class="perm-note">
-                A content ID is an address made from the file's own bytes: it encodes the file's BLAKE3 hash. Hash a copy of the file and compare. A match means it is the file Serey stored. Click one to copy it.
+                A content ID is an address made from the file's own bytes: it encodes the file's BLAKE3 hash. Hash a copy of the file and compare. A match means it is the file Serey stored. Click one to copy it, or open it on cid.serey.io to check the file in your browser.
               </p>
             </section>
           </template>
@@ -928,6 +932,9 @@ export default {
     },
     arweaveUrl(id) {
       return `https://arweave.net/${id}`
+    },
+    cidExplorerUrl(cid) {
+      return `https://cid.serey.io/${encodeURIComponent(cid)}`
     },
     isImage(url) {
       return /\.(png|jpe?g|gif|webp|avif|svg|bmp)$/i.test(String(url || '').split('?')[0])
@@ -2135,8 +2142,8 @@ export default {
   line-height: 1.55;
 }
 
-/* A Content IDs row has no "open" link, so it is one column short. */
-.cid-row { grid-template-columns: auto minmax(11rem, 1fr) minmax(0, 1.4fr); }
+.cid-open { background: #192bc2; }
+.cid-open:hover { background: #121f94; }
 
 @media (max-width: 720px) {
   .perm-row {
@@ -2146,11 +2153,6 @@ export default {
       "hash hash"
       "open open";
     gap: .6rem .8rem;
-  }
-  .cid-row {
-    grid-template-areas:
-      "icon what"
-      "hash hash";
   }
   .perm-row .mthumb { grid-area: icon; }
   .perm-what { grid-area: what; }
