@@ -410,8 +410,16 @@
               :initial="{ opacity: 0, y: 18 }"
               :visible-once="{ opacity: 1, y: 0, transition: { type: 'spring', stiffness: 240, damping: 26 } }"
             >
-              <h3 class="section-hdg"><span class="accent-dot"></span> Proof of storage</h3>
-              <p class="section-sub">Each file in this post has a unique ID on a decentralized network.</p>
+              <div class="proof-head">
+                <div>
+                  <h3 class="section-hdg"><span class="accent-dot"></span> Proof of storage</h3>
+                  <p class="section-sub">Each file in this post has a unique ID on a decentralized network.</p>
+                </div>
+                <a class="cid-verify proof-all" :href="cidPostUrl" target="_blank" rel="noopener noreferrer">
+                  {{ mediaCids.length > 1 ? 'Verify all files on cid.serey.io' : 'Verify on cid.serey.io' }}
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M9 7h8v8" /></svg>
+                </a>
+              </div>
 
               <div class="perm-list">
                 <div v-for="row in mediaCids" :key="row.key" class="perm-row">
@@ -768,6 +776,10 @@ export default {
 
     // Not on the chain for an ordinary post. A Forever post's `s5` ids are
     // already under Permanent copies, so they are left out here.
+    // The page on cid.serey.io that checks every file of this post at once.
+    cidPostUrl() {
+      return `https://cid.serey.io/post/${encodeURIComponent(this.post.author)}/${encodeURIComponent(this.post.permlink)}`
+    },
     mediaCids() {
       return cidRows(this.mediaProof, {
         urls: this.mediaUrls,
@@ -2011,6 +2023,10 @@ export default {
 }
 .perm-status.archiving { background: #fff4d6; color: #9a5b00; border: 1px solid #f3d38a; }
 .perm-status.confirmed { background: #e8f7ee; color: #1f8a4c; border: 1px solid #b7e4c7; }
+
+.proof-head { display: flex; align-items: flex-start; justify-content: space-between; gap: .5rem 1rem; flex-wrap: wrap; }
+.proof-head .section-sub { margin-bottom: 1rem; }
+.proof-all { margin-top: .1rem; padding: .4rem .8rem; font-size: .76rem; }
 
 .section-sub {
   margin: -.4rem 0 1rem;
