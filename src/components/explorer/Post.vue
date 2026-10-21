@@ -315,11 +315,17 @@
               :initial="{ opacity: 0, y: 18 }"
               :visible-once="{ opacity: 1, y: 0, transition: { type: 'spring', stiffness: 240, damping: 26 } }"
             >
-              <h3 class="section-hdg">
-                <span class="accent-dot"></span> Permanent copies
-                <span v-if="archiving" class="perm-status archiving"><span class="pulse-dot"></span>Archiving</span>
-                <span v-else-if="arweave.state === 'permanent'" class="perm-status confirmed">✓ Confirmed</span>
-              </h3>
+              <div class="proof-head">
+                <h3 class="section-hdg">
+                  <span class="accent-dot"></span> Permanent copies
+                  <span v-if="archiving" class="perm-status archiving"><span class="pulse-dot"></span>Archiving</span>
+                  <span v-else-if="arweave.state === 'permanent'" class="perm-status confirmed">✓ Confirmed</span>
+                </h3>
+                <a v-if="permanence.has" class="cid-verify proof-all" :href="cidPostUrl" target="_blank" rel="noopener noreferrer">
+                  Check every copy on cid.serey.io
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M9 7h8v8" /></svg>
+                </a>
+              </div>
               <p v-if="foreverPending" class="perm-lede">
                 Serey is copying this post's text and files to Arweave. Once every copy is accepted, the post is re-recorded on the chain with their IDs and they appear here. The page checks again automatically.
               </p>
@@ -352,10 +358,16 @@
                       </button>
                     </template>
                   </div>
-                  <a class="perm-open" :href="arweaveUrl(permanence.text.ar)" target="_blank" rel="noopener noreferrer">
-                    View on Arweave
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M9 7h8v8" /></svg>
-                  </a>
+                  <div class="perm-actions">
+                    <a class="perm-open" :href="arweaveUrl(permanence.text.ar)" target="_blank" rel="noopener noreferrer">
+                      View on Arweave
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M9 7h8v8" /></svg>
+                    </a>
+                    <a class="cid-verify" :href="cidExplorerUrl(permanence.text.ar)" target="_blank" rel="noopener noreferrer">
+                      Check on cid.serey.io
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M9 7h8v8" /></svg>
+                    </a>
+                  </div>
                 </div>
 
                 <div v-for="file in foreverFiles" :key="file.ar" class="perm-row">
@@ -387,8 +399,8 @@
                       View on Arweave
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M9 7h8v8" /></svg>
                     </a>
-                    <a v-if="file.s5" class="cid-verify" :href="cidExplorerUrl(file.s5)" target="_blank" rel="noopener noreferrer">
-                      Verify on cid.serey.io
+                    <a class="cid-verify" :href="cidExplorerUrl(file.ar)" target="_blank" rel="noopener noreferrer">
+                      Check on cid.serey.io
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M9 7h8v8" /></svg>
                     </a>
                   </div>
@@ -396,7 +408,7 @@
               </div>
 
               <p v-if="permanence.has" class="perm-note">
-                A matching fingerprint means the Arweave copy is identical to what was published. Click one to copy it.
+                A matching fingerprint means the Arweave copy is identical to what was published. cid.serey.io downloads each copy and compares fingerprints in your browser. Click a fingerprint to copy it.
               </p>
             </section>
           </template>
@@ -410,8 +422,16 @@
               :initial="{ opacity: 0, y: 18 }"
               :visible-once="{ opacity: 1, y: 0, transition: { type: 'spring', stiffness: 240, damping: 26 } }"
             >
-              <h3 class="section-hdg"><span class="accent-dot"></span> Proof of storage</h3>
-              <p class="section-sub">Each file in this post has a unique ID on a decentralized network.</p>
+              <div class="proof-head">
+                <div>
+                  <h3 class="section-hdg"><span class="accent-dot"></span> Proof of storage</h3>
+                  <p class="section-sub">Each file in this post has a unique ID on a decentralized network.</p>
+                </div>
+                <a v-if="!permanence.has" class="cid-verify proof-all" :href="cidPostUrl" target="_blank" rel="noopener noreferrer">
+                  {{ mediaCids.length > 1 ? 'Check every file on cid.serey.io' : 'Check on cid.serey.io' }}
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M9 7h8v8" /></svg>
+                </a>
+              </div>
 
               <div class="perm-list">
                 <div v-for="row in mediaCids" :key="row.key" class="perm-row">
@@ -434,14 +454,14 @@
                     </button>
                   </div>
                   <a class="perm-open cid-open" :href="cidExplorerUrl(row.cid)" target="_blank" rel="noopener noreferrer">
-                    View on cid.serey.io
+                    Check on cid.serey.io
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M9 7h8v8" /></svg>
                   </a>
                 </div>
               </div>
 
               <p class="perm-note">
-                Content IDs are unique fingerprints of the files in this post, stored on a decentralized network. Copy an ID to find or check the file anytime, even outside Serey.
+                Content IDs are unique fingerprints of the files in this post, stored on a decentralized network. Copy an ID to find or check the file anytime, even outside Serey; cid.serey.io checks it in your browser.
               </p>
             </section>
           </template>
@@ -766,6 +786,10 @@ export default {
       return [...(d.image_url || []), ...(d.videos || []), ...this.permanence.media.map(m => m.url)]
     },
 
+    // The page on cid.serey.io that checks every file of this post, on S5 and on Arweave.
+    cidPostUrl() {
+      return `https://cid.serey.io/post/${encodeURIComponent(this.post.author)}/${encodeURIComponent(this.post.permlink)}`
+    },
     // Not on the chain for an ordinary post. A Forever post's `s5` ids are
     // already under Permanent copies, so they are left out here.
     mediaCids() {
@@ -2179,6 +2203,10 @@ export default {
 }
 .cid-verify:hover { background: #eef1ff; border-color: #192bc2; color: #192bc2; text-decoration: none; }
 .cid-verify svg { width: 12px; height: 12px; }
+
+.proof-head { display: flex; align-items: flex-start; justify-content: space-between; gap: .5rem 1rem; flex-wrap: wrap; }
+.proof-head .section-sub { margin-bottom: 1rem; }
+.proof-all { margin-top: .1rem; padding: .4rem .8rem; font-size: .76rem; }
 
 @media (max-width: 720px) {
   .perm-row {
