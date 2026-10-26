@@ -836,19 +836,40 @@ export default {
     | it is still chain data, just a different call.
     */
     async fillFromOperation(author, permlink) {
-      let history
-      try {
-        history = await this.steem_database_call('get_account_history', [author, -1, 100])
-      } catch (e) {
-        return
+      const history = (from, limit) => this.steem_database_call('get_account_history', [author, from, limit])
+      const findOp = (entries) => {
+        let found = null
+        for (const entry of entries || []) {
+          const o = entry && entry[1] && entry[1].op
+          if (o && o[0] === 'comment' && o[1].author === author && o[1].permlink === permlink) found = o[1]
+        }
+        return found
       }
-      if (!Array.isArray(history)) return
 
       let op = null
-      for (const entry of history) {
-        const o = entry && entry[1] && entry[1].op
-        if (!o || o[0] !== 'comment') continue
-        if (o[1].author === author && o[1].permlink === permlink) op = o[1]
+      try {
+        const recent = await history(-1, 100)
+        if (!Array.isArray(recent) || !recent.length) return
+        op = findOp(recent)
+
+        // Votes and other actions push older posts out of the latest 100.
+        // Binary-search the history for the post's last edit, then read around it.
+        const until = (this.post && this.post.last_update) || ''
+        if (!op && until) {
+          let lo = 0
+          let hi = recent[recent.length - 1][0]
+          while (lo < hi) {
+            const mid = Math.ceil((lo + hi) / 2)
+            const probe = await history(mid, Math.min(1, mid))
+            const entry = probe && probe[probe.length - 1]
+            if (entry && (entry[1].timestamp || '') <= until) lo = mid
+            else hi = mid - 1
+          }
+          const top = Math.min(lo + 20, recent[recent.length - 1][0])
+          op = findOp(await history(top, Math.min(100, top)))
+        }
+      } catch (e) {
+        return
       }
       if (!op) return
 
